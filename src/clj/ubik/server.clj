@@ -57,7 +57,7 @@
     (swap! user-queue conj uid)
     (if (= (count @user-queue) 1)
       (chsk-send! uid [:ubik/start-action])
-      (chsk-send! uid [:ubik/turn {:time (calculate-action-timeout (count @user-queue))}]))))
+      (chsk-send! uid [:ubik/turn {:action-time (calculate-action-timeout (count @user-queue))}]))))
 
 (defmethod event-msg-handler :chsk/uidport-close [{:keys [event ring-req]}]
   (let [uid (get-in ring-req [:params :client-id])

@@ -2,7 +2,9 @@
   (:require [ubik.commons.core :refer [anim-ids]]
             [taoensso.encore :refer [debugf]]
             [taoensso.sente :as sente]
-            [cljs.core.match :refer-macros [match]]))
+            [cljs.core.match :refer-macros [match]]
+            [cljs.core.async :refer [<! timeout put! chan]])
+  (:require-macros [cljs.core.async.macros :refer [go-loop alt!]]))
 
 (def current-anims (atom (into {} (map (fn [[k v]] [k (first v)]) anim-ids))))
 
@@ -24,8 +26,21 @@
   (let [elem (.getElementById js/document id)]
     (set! (.. elem -style -visibility) visibility)))
 
+(defn countdown [action-time]
+  (let [poison-ch (chan)
+        countdown-elem (.getElementById js/document "countdown")]
+    (go-loop [current-t (quot action-time 1000)]
+      (when (and (< 0 current-t) (alt! poison-ch false :default :keep-going))
+        (set! (.-innerHTML countdown-elem) current-t)
+        (<! (timeout 1000))
+        (recur (dec current-t))))
+    poison-ch))
+
+(defonce countdown-poison-ch (atom nil))
+(defn stop-countdown! [] (when-let [ch @countdown-poison-ch] (put! ch :stop)))
 (defn start-countdown! [action-time]
-  (debugf "wait %s" action-time))
+  (stop-countdown!)
+  (reset! countdown-poison-ch (countdown action-time)))
 
 (defmethod event-msg-handler :chsk/recv [{:keys [?data]}]
   (debugf "chsk/recv: %s" ?data)
@@ -34,6 +49,7 @@
     (match ?data
            [:ubik/current-anims {:ids anims}] (reset! current-anims anims)
            [:ubik/change-anim {:type type :id id}] (swap! current-anims assoc type id)
+           [:ubik/turn {:action-time action-time}] (start-countdown! action-time)
            [:ubik/start-action] (do (show-elem "main-container") (hide-elem "wait-container"))
            [:ubik/stop-action {:action-time action-time}]
            (do (hide-elem "main-container") (show-elem "wait-container") (start-countdown! action-time))
