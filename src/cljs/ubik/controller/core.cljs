@@ -22,11 +22,6 @@
 (defmethod event-msg-handler :chsk/handshake [{:keys [?data]}]
   (debugf "chsk/handshake: %s" ?data))
 
-(when-let [target-el (.getElementById js/document "btn1")]
-  (.addEventListener target-el "click"
-                     (fn [ev]
-                       (chsk-send! [:ubik/change-anim {:type 0 :id 0}]))))
-
 (defn get-swiper [swiper-id]
   (let [swiper (js/Swiper. (str "#" swiper-id) #js {:direction "horizontal" :loop true})]
     (.on swiper "slideChangeEnd"

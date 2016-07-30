@@ -20,7 +20,6 @@
   (hiccup/html
    [:style controller-style]
    (include-css "https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.3.1/css/swiper.min.css")
-   [:button#btn1 {:type "button"} "change-anim"]
    (reduce conj [:div {:id "main-container"}]
            (map (fn [[swiper-id slide-contents]] (get-swiper-container swiper-id slide-contents))
                 [["top-container" [":" "8" "X"]]
