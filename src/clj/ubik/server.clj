@@ -24,13 +24,20 @@
   (def chsk-send! send-fn)
   (def connected-uids connected-uids))
 
-(defn index-handler [req]
+(defn controller-handler [req]
   (hiccup/html
    [:button#btn1 {:type "button"} "change-anim"]
-   [:script {:src "main.js"}]))
+   [:script {:src "ubik/controller/main.js"}]))
+
+(defn anim-handler [req]
+  (hiccup/html
+   [:body
+    [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.min.js"}]
+    [:script {:src "ubik/anim/main.js"}]]))
 
 (defroutes my-routes
-  (GET "/" req (index-handler req))
+  (GET "/" req (controller-handler req))
+  (GET "/anim" req (anim-handler req))
   (GET "/chsk" req (ring-ajax-get-or-ws-handshake req))
   (POST "/chsk" req (ring-ajax-post req))
   (route/not-found "404"))
@@ -66,10 +73,12 @@
     (doseq [[idx uid] (drop (inc closed-idx) (map-indexed vector @user-queue))]
       (chsk-send! uid [:ubik/turn {:time (calculate-action-timeout (inc idx))}]))))
 
-(defmethod event-msg-handler :ubik/change-anim [{:keys [event ?data]}]
+(defmethod event-msg-handler :ubik/change-anim [{:keys [event ?data ring-req]}]
   (debugf "ubik/change-anim: %s %s" event ?data)
-  (doseq [uid (:any @connected-uids)]
-    (chsk-send! uid event)))
+  (let [uid (get-in ring-req [:params :client-id])]
+    (when (= (peek @user-queue) uid)
+      (doseq [uid (:any @connected-uids)]
+        (chsk-send! uid event)))))
 
 (defmethod event-msg-handler :default [{:as ev-msg :keys [event ring-req]}]
   (let [uid (get-in ring-req [:params :client-id])]

@@ -1,4 +1,4 @@
-(ns ubik.controller
+(ns ubik.controller.core
  (:require [taoensso.encore :refer [debugf]]
            [taoensso.sente :as sente]))
 

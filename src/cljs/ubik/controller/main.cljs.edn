@@ -1,0 +1,4 @@
+{:require [ubik.controller.core]
+; :init-fns [ubik.controller.core/start-router!]
+ :compiler-options {:asset-path "ubik/controller/main.out"}}
+
