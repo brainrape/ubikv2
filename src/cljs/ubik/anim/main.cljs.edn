@@ -1,2 +1,4 @@
-{:require [ubik.anim.core]
+{:require [ubik.anim.core
+           ubik.commons.core]
+ :init-fns [ubik.anim.core/start-router!]
  :compiler-options {:asset-path "ubik/anim/main.out"}}

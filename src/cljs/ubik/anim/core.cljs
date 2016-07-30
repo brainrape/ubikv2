@@ -2,10 +2,9 @@
   (:require [ubik.anim.renderers :as renderers]
             [ubik.anim.cameras :as cameras]
             [ubik.anim.audio :as audio]
+            [ubik.commons.core :refer [anim-ids]]
             [taoensso.encore :refer [debugf]]
             [taoensso.sente :as sente]))
-
-(enable-console-print!)
 
 (def THREE js/THREE)
 (def fps 60)
@@ -88,5 +87,3 @@
 (defn start-router! []
   (stop-router!)
   (reset! router (sente/start-chsk-router! ch-chsk event-msg-handler)))
-
-(start-router!)

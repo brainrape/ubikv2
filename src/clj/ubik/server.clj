@@ -15,6 +15,8 @@
 
 (def user-queue (atom clojure.lang.PersistentQueue/EMPTY))
 
+(def current-anims (atom {:top 0 :center 0 :bottom 0 :bg 0}))
+
 (let [{:keys [ch-recv send-fn ajax-post-fn ajax-get-or-ws-handshake-fn connected-uids]}
       (sente/make-channel-socket! sente-web-server-adapter {:packer :edn
                                                             :user-id-fn (fn [ring-req] (:client-id ring-req))})]
@@ -44,6 +46,11 @@
 
 (defmulti event-msg-handler :id)
 
+(defmethod event-msg-handler :chsk/uidport-open [{:keys [event ring-req]}]
+  (let [uid (get-in ring-req [:params :client-id])]
+    (debugf "chsk/uidport-open: %s %s" event uid)
+    (chsk-send! uid [:ubik/current-anims {:ids @current-anims}])))
+
 (defmethod event-msg-handler :ubik/enqueue [{:keys [event ring-req]}]
   (let [uid (get-in ring-req [:params :client-id])]
     (debugf "ubik/enqueue: %s %s" event uid)
@@ -66,6 +73,7 @@
   (debugf "ubik/change-anim: %s %s" event ?data)
   (let [uid (get-in ring-req [:params :client-id])]
     (when (= (peek @user-queue) uid)
+      (swap! current-anims assoc (:type ?data) (:id ?data))
       (doseq [uid (:any @connected-uids)]
         (chsk-send! uid event)))))
 

@@ -11,7 +11,8 @@
                  [ring/ring-defaults "0.2.1"]
                  [compojure "1.5.1"]
                  [hiccup "1.0.5"]
-                 [garden "1.3.2"]])
+                 [garden "1.3.2"]
+                 [org.clojure/core.match "0.3.0-alpha4"]])
 
 (require
  '[adzerk.boot-cljs :refer [cljs]]
