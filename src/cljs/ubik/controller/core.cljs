@@ -1,6 +1,6 @@
 (ns ubik.controller.core
- (:require [taoensso.encore :refer [debugf]]
-           [taoensso.sente :as sente]))
+  (:require [taoensso.encore :refer [debugf]]
+            [taoensso.sente :as sente]))
 
 (let [{:keys [ch-recv send-fn]}
       (sente/make-channel-socket! "/chsk" {:type :auto :packer :edn})]
@@ -26,6 +26,17 @@
   (.addEventListener target-el "click"
                      (fn [ev]
                        (chsk-send! [:ubik/change-anim {:type 0 :id 0}]))))
+
+(defn get-swiper [swiper-id]
+  (let [swiper (js/Swiper. (str "#" swiper-id) #js {:direction "horizontal" :loop true})]
+    (.on swiper "slideChangeEnd"
+         (fn [_] (let [idx (mod (dec (.-activeIndex swiper)) (- (.. swiper -slides -length) 2))]
+                   (chsk-send! [:ubik/change-anim {:type swiper-id :id idx}]))))
+    swiper))
+
+(set! js/top-container (get-swiper 'top-container))
+(set! js/center-swiper (get-swiper 'center-container))
+(set! js/bottom-swiper (get-swiper 'bottom-container))
 
 (def router (atom nil))
 (defn stop-router! [] (when-let [stop-f @router] (stop-f)))

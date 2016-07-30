@@ -1,8 +1,8 @@
 (ns ubik.server
-  (:require [ring.middleware.defaults :refer [site-defaults]]
+  (:require [ubik.handlers :refer [controller-handler anim-handler]]
+            [ring.middleware.defaults :refer [site-defaults]]
             [compojure.core :refer [defroutes GET POST]]
             [compojure.route :as route]
-            [hiccup.core :as hiccup]
             [clojure.core.async :as async :refer [<! go-loop put! chan alt!]]
             [taoensso.timbre :refer [debugf]]
             [taoensso.sente :as sente]
@@ -23,17 +23,6 @@
   (def ch-chsk ch-recv)
   (def chsk-send! send-fn)
   (def connected-uids connected-uids))
-
-(defn controller-handler [req]
-  (hiccup/html
-   [:button#btn1 {:type "button"} "change-anim"]
-   [:script {:src "ubik/controller/main.js"}]))
-
-(defn anim-handler [req]
-  (hiccup/html
-   [:body
-    [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.min.js"}]
-    [:script {:src "ubik/anim/main.js"}]]))
 
 (defroutes my-routes
   (GET "/" req (controller-handler req))
