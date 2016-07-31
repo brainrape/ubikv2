@@ -65,6 +65,8 @@
     (debugf "chsk/uidport-close: %s %s" event uid)
     (swap! user-queue #(apply conj clojure.lang.PersistentQueue/EMPTY (remove #{%2} %1)) uid) ;;TODO this is O(n)
     (when-let [next-uid (and (= closed-idx 0) (peek @user-queue))]
+      (reset! last-tick-timestamp (System/currentTimeMillis))
+      (start-scheduler!)
       (chsk-send! next-uid [:ubik/start-action]))
     (doseq [[idx uid] (drop closed-idx (map-indexed vector @user-queue))]
       (chsk-send! uid [:ubik/turn {:action-time (calculate-action-timeout (inc idx))}]))))
@@ -84,8 +86,8 @@
 (defn scheduler []
   (let [poison-ch (chan)]
     (go-loop []
-      (when (alt! poison-ch false :default :keep-going) 
-        (<! (async/timeout tick-ms))
+      (<! (async/timeout tick-ms))
+      (when (alt! poison-ch false :default :keep-going)
         (reset! last-tick-timestamp (System/currentTimeMillis))
         (loop [users @user-queue]
           (when-let [uid (and (< 1 (count users)) (peek users))]
