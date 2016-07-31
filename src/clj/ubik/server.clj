@@ -66,8 +66,8 @@
     (swap! user-queue #(apply conj clojure.lang.PersistentQueue/EMPTY (remove #{%2} %1)) uid) ;;TODO this is O(n)
     (when-let [next-uid (and (= closed-idx 0) (peek @user-queue))]
       (chsk-send! next-uid [:ubik/start-action]))
-    (doseq [[idx uid] (drop (inc closed-idx) (map-indexed vector @user-queue))]
-      (chsk-send! uid [:ubik/turn {:time (calculate-action-timeout (inc idx))}]))))
+    (doseq [[idx uid] (drop closed-idx (map-indexed vector @user-queue))]
+      (chsk-send! uid [:ubik/turn {:action-time (calculate-action-timeout (inc idx))}]))))
 
 (defmethod event-msg-handler :ubik/change-anim [{:keys [event ?data ring-req]}]
   (debugf "ubik/change-anim: %s %s" event ?data)
