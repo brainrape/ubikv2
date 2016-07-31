@@ -62,7 +62,7 @@
   (let [next-fn (if (= direction :prev) dec inc)
         idx (mod (next-fn (@current-anims anim-type)) (count (anim-ids anim-type)))]
     (swap! current-anims assoc anim-type idx)
-    (chsk-send! [:ubik/change-anim {:type anim-type :id idx}])))
+    (chsk-send! [:ubik/change-anim {:type anim-type :id idx :direction direction}])))
 
 (defn get-swiper [anim-type]
   (let [swiper (js/Swiper. (str "#" (name anim-type) "-container") #js {:direction "horizontal" :loop true})]
