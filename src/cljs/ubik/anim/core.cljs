@@ -3,11 +3,16 @@
             [ubik.anim.cameras :as cameras]
             [ubik.anim.audio :as audio]
             [ubik.commons.core :refer [anim-ids]]
+            [cljs.core.match :refer-macros [match]]
             [taoensso.encore :refer [debugf]]
-            [taoensso.sente :as sente]))
+            [taoensso.sente :as sente]
+            [cljs.core.async :refer [<! timeout chan]])
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (def THREE js/THREE)
 (def fps 60)
+
+(def event-queue (atom cljs.core.PersistentQueue.EMPTY))
 
 (let [{:keys [ch-recv send-fn]}
       (sente/make-channel-socket! "/chsk" {:type :auto :packer :edn})]
@@ -20,7 +25,10 @@
   (debugf "unhandled event: %s" event))
 
 (defmethod event-msg-handler :chsk/recv [{:keys [?data]}]
-  (debugf "chsk/recv: %s" ?data))
+  (debugf "chsk/recv: %s" ?data)
+  (match ?data
+         [:ubik/change-anim event] (swap! event-queue conj event)
+         :else (debugf "unhandled chsk/recv %s" ?data)))
 
 (defn get-render-target []
   (THREE.WebGLRenderTarget.
@@ -67,19 +75,34 @@
       (update-animation main-renderer cube-animation rt-texture state)
       {:scene scene :camera camera})))
 
-(defn start-loop []
+(defn get-anims
+  ([] (get-anims {}))
+  ([current-events]
+   (loop [events current-events]
+     (if-let [event (peek @event-queue)]
+       (do
+         (swap! event-queue pop)
+         (let [event-data (dissoc event :type)]
+           (recur (update-in events [(:type event)] #(conj (or %1 cljs.core.PersistentQueue.EMPTY) %2) event-data))))
+       events))))
+
+(def loop-ch (atom (chan)))
+
+(defn start-loop! []
+  (go (while true (<! (timeout (/ 1000 fps))) (>! @loop-ch (.getTime (js/Date.)))))
   (let [analyser (audio/get-audio-analyser)
-        audio-data (audio/get-data-array analyser)]
-    (defn animate [now-msec]
-      (.getByteFrequencyData analyser audio-data)
-      (.setTimeout js/window #(.requestAnimationFrame js/window animate) (/ 1000 fps))
-      (let [state {:audio-data (array-seq audio-data)}]
-        (update-animation main-renderer main-animation state)))
-    (.requestAnimationFrame js/window animate)))
+        audio-data (audio/get-data-array analyser)
+        get-audio-data (constantly (do (.getByteFrequencyData analyser audio-data) (array-seq audio-data)))]
+    (go-loop [state {:now-msec (.getTime (js/Date.)) :audio-data (get-audio-data) :delta 0 :anims (get-anims)}]
+      (update-animation main-renderer main-animation state)
+      (let [now-msec (<! @loop-ch)
+            delta (- now-msec (:now-msec state))
+            anims (get-anims (:anims state))]
+        (recur (merge state {:now-msec now-msec :delta delta :audio-data (get-audio-data) :anims anims}))))))
 
 (defonce animation-started (atom false))
 (when-not @animation-started
-  (start-loop)
+  (start-loop!)
   (reset! animation-started true))
 
 (def router (atom nil))
