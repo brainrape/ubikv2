@@ -70,9 +70,7 @@
     (.on swiper "onSlidePrevEnd" (fn [_] (set-next-anim! anim-type :prev)))
     swiper))
 
-(set! js/top-container (get-swiper :top))
-(set! js/center-swiper (get-swiper :center))
-(set! js/bottom-swiper (get-swiper :bottom))
+(set! js/swipers (clj->js (into {} (map (fn [swiper] [swiper (get-swiper swiper)]) [:top :center :bottom]))))
 
 (def router (atom nil))
 (defn stop-router! [] (when-let [stop-f @router] (stop-f)))
