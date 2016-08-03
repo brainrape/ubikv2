@@ -78,10 +78,10 @@
 
 (def loop-ch (atom (chan)))
 
-(defn get-current-anims [previous-anims {:keys [type id] :as anim}]
+(defn get-current-anims [previous-anims {:keys [type] :as anim}]
   (if (or (some? (previous-anims type)) (nil? anim))
     previous-anims
-    (assoc-in previous-anims [type] id)))
+    (assoc-in previous-anims [type] (dissoc anim :type))))
 
 (defn start-loop! []
   (go (while true (<! (timeout (/ 1000 fps))) (>! @loop-ch (.getTime (js/Date.)))))
