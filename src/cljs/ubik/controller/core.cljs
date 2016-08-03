@@ -65,7 +65,7 @@
     (chsk-send! [:ubik/change-anim {:type anim-type :id idx :direction direction}])))
 
 (defn get-swiper [anim-type]
-  (let [swiper (js/Swiper. (str "#" (name anim-type) "-container") #js {:direction "horizontal" :loop true})]
+  (let [swiper (js/Swiper. (str "#" (name anim-type) "-container") #js {:direction "horizontal" :loop true :speed 150})]
     (.on swiper "onSlideNextEnd" (fn [_] (set-next-anim! anim-type :next)))
     (.on swiper "onSlidePrevEnd" (fn [_] (set-next-anim! anim-type :prev)))
     swiper))

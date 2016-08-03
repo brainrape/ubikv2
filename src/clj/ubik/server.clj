@@ -1,6 +1,7 @@
 (ns ubik.server
   (:require [ubik.handlers :refer [controller-handler anim-handler]]
-            [ring.middleware.defaults :refer [site-defaults]]
+            [ring.middleware.defaults :refer [site-defaults wrap-defaults]]
+            [ring.middleware.resource :refer [wrap-resource]]
             [compojure.core :refer [defroutes GET POST]]
             [compojure.route :as route]
             [clojure.core.async :as async :refer [<! go-loop put! chan alt!]]
@@ -9,7 +10,7 @@
             [org.httpkit.server :as http-kit]
             [taoensso.sente.server-adapters.http-kit :refer [sente-web-server-adapter]]))
 
-(def tick-ms 10000)
+(def tick-ms 20000)
 
 (def last-tick-timestamp (atom (System/currentTimeMillis)))
 
@@ -34,15 +35,36 @@
   (route/not-found "404"))
 
 (def my-ring-handler
-  (let [ring-defaults-config
-        (-> site-defaults
-            (assoc-in [:static :resources] "/")
-            (assoc-in [:security :anti-forgery] {:read-token (fn [req] (-> req :params :csrf-token))}))]
-    (ring.middleware.defaults/wrap-defaults my-routes ring-defaults-config)))
+  (-> my-routes
+      (wrap-defaults site-defaults)
+      (wrap-resource "/")))
 
 (defn calculate-action-timeout [queue-pos]
   (let [last-tick-elapsed (- (System/currentTimeMillis) @last-tick-timestamp)]
     (+ (* (- queue-pos 2) tick-ms) (- tick-ms last-tick-elapsed))))
+
+(defn scheduler []
+  (let [poison-ch (chan)]
+    (go-loop []
+      (<! (async/timeout tick-ms))
+      (when (alt! poison-ch false :default :keep-going)
+        (reset! last-tick-timestamp (System/currentTimeMillis))
+        (loop [users @user-queue]
+          (when-let [uid (and (< 1 (count users)) (peek users))]
+            (if (contains? (:any @connected-uids) uid)
+              (do
+                (chsk-send! uid [:ubik/stop-action {:action-time (calculate-action-timeout (count @user-queue))}])
+                (swap! user-queue #(conj (pop %1) %2) uid)
+                (chsk-send! (peek @user-queue) [:ubik/start-action]))
+              (recur (pop users)))))
+        (recur)))
+    poison-ch))
+
+(defonce scheduler-poison-ch (atom nil))
+(defn stop-scheduler! [] (when-let [ch @scheduler-poison-ch] (put! ch :stop)))
+(defn start-scheduler! []
+  (stop-scheduler!)
+  (reset! scheduler-poison-ch (scheduler)))
 
 (defmulti event-msg-handler :id)
 
@@ -82,29 +104,6 @@
 (defmethod event-msg-handler :default [{:as ev-msg :keys [event ring-req]}]
   (let [uid (get-in ring-req [:params :client-id])]
     (debugf "Unhandled event: %s %s" event uid)))
-
-(defn scheduler []
-  (let [poison-ch (chan)]
-    (go-loop []
-      (<! (async/timeout tick-ms))
-      (when (alt! poison-ch false :default :keep-going)
-        (reset! last-tick-timestamp (System/currentTimeMillis))
-        (loop [users @user-queue]
-          (when-let [uid (and (< 1 (count users)) (peek users))]
-            (if (contains? (:any @connected-uids) uid)
-              (do
-                (chsk-send! uid [:ubik/stop-action {:action-time (calculate-action-timeout (count @user-queue))}])
-                (swap! user-queue #(conj (pop %1) %2) uid)
-                (chsk-send! (peek @user-queue) [:ubik/start-action]))
-              (recur (pop users)))))
-        (recur)))
-    poison-ch))
-
-(defonce scheduler-poison-ch (atom nil))
-(defn stop-scheduler! [] (when-let [ch @scheduler-poison-ch] (put! ch :stop)))
-(defn start-scheduler! []
-  (stop-scheduler!)
-  (reset! scheduler-poison-ch (scheduler)))
 
 (defn start-web-server!* [ring-handler port]
   (let [http-kit-stop-fn (http-kit/run-server ring-handler {:port port})]
