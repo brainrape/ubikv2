@@ -1,26 +1,15 @@
 (ns ubik.controller.core
-  (:require [ubik.commons.core :refer [anim-ids]]
+  (:require [ubik.commons.core :refer [face-anim-types]]
             [taoensso.encore :refer [debugf]]
             [taoensso.sente :as sente]
             [cljs.core.match :refer-macros [match]]
             [cljs.core.async :refer [<! timeout put! chan]])
   (:require-macros [cljs.core.async.macros :refer [go-loop alt!]]))
 
-(def current-anims (atom (into {} (map (fn [[k v]] [k (first v)]) anim-ids))))
-
 (let [{:keys [ch-recv send-fn]}
       (sente/make-channel-socket! "/chsk" {:type :auto :packer :edn})]
   (def ch-chsk ch-recv)
   (def chsk-send! send-fn))
-
-(defmulti event-msg-handler :id)
-
-(defmethod event-msg-handler :default [{:keys [event]}]
-  (debugf "unhandled event: %s" event))
-
-(defmethod event-msg-handler :chsk/state [{:keys [?data]}]
-  (chsk-send! [:ubik/enqueue])
-  (debugf "chsk/state: %s" ?data))
 
 (defn set-visibility-by-id! [id visibility]
   (let [elem (.getElementById js/document id)]
@@ -42,27 +31,9 @@
   (stop-countdown!)
   (reset! countdown-poison-ch (countdown action-time)))
 
-(defmethod event-msg-handler :chsk/recv [{:keys [?data]}]
-  (debugf "chsk/recv: %s" ?data)
-  (letfn [(show-elem [id] (set-visibility-by-id! id "visible"))
-          (hide-elem [id] (set-visibility-by-id! id "hidden"))]
-    (match ?data
-           [:ubik/current-anims {:ids anims}] (reset! current-anims anims)
-           [:ubik/change-anim {:type type :id id}] (swap! current-anims assoc type id)
-           [:ubik/turn {:action-time action-time}] (start-countdown! action-time)
-           [:ubik/start-action] (do (show-elem "main-container") (hide-elem "wait-container"))
-           [:ubik/stop-action {:action-time action-time}]
-           (do (hide-elem "main-container") (show-elem "wait-container") (start-countdown! action-time))
-           :else (debugf "unhandled chsk/recv %s" ?data))))
-
-(defmethod event-msg-handler :chsk/handshake [{:keys [?data]}]
-  (debugf "chsk/handshake: %s" ?data))
-
 (defn set-next-anim! [swiper anim-type direction]
   (let [next-fn (if (= direction :prev) dec inc)
         idx (mod (dec (.-activeIndex swiper))  (- (.. swiper -slides -length) 2))]
-    (debugf "%s %s" (.-activeIndex swiper) (.-length (.-slides swiper)))
-    (swap! current-anims assoc anim-type idx)
     (chsk-send! [:ubik/change-anim {:type anim-type :id idx :direction direction}])))
 
 (defn get-swiper [anim-type]
@@ -71,7 +42,41 @@
     (.on swiper "onSlidePrevEnd" (fn [_] (set-next-anim! swiper anim-type :prev)))
     swiper))
 
-(set! js/swipers (clj->js (into {} (map (fn [swiper] [swiper (get-swiper swiper)]) [:top :center :bottom]))))
+(def swipers (into {} (map (fn [type] [type (get-swiper type)]) [:top :center :bottom])))
+(set! js/swipers (clj->js swipers))
+
+(defn set-current-slide! [type id]
+  (.slideTo (swipers type) (inc id) 0 false))
+
+(defn set-current-anims! [anims]
+  (doseq [[type id] (dissoc anims :bg)]
+    (set-current-slide! type id)))
+
+(defn change-anim! [type id]
+  (when (contains? face-anim-types type)
+    (set-current-slide! type id)))
+
+(defmulti event-msg-handler :id)
+
+(defmethod event-msg-handler :default [{:keys [event]}]
+  (debugf "unhandled event: %s" event))
+
+(defmethod event-msg-handler :chsk/state [{:keys [?data]}]
+  (chsk-send! [:ubik/enqueue])
+  (debugf "chsk/state: %s" ?data))
+
+(defmethod event-msg-handler :chsk/recv [{:keys [?data]}]
+  (debugf "chsk/recv: %s" ?data)
+  (letfn [(show-elem [id] (set-visibility-by-id! id "visible"))
+          (hide-elem [id] (set-visibility-by-id! id "hidden"))]
+    (match ?data
+           [:ubik/current-anims anims] (set-current-anims! anims)
+           [:ubik/change-anim {:type type :id id}] (change-anim! type id)
+           [:ubik/turn {:action-time action-time}] (start-countdown! action-time)
+           [:ubik/start-action] (do (show-elem "main-container") (hide-elem "wait-container"))
+           [:ubik/stop-action {:action-time action-time}]
+           (do (hide-elem "main-container") (show-elem "wait-container") (start-countdown! action-time))
+           :else (debugf "unhandled chsk/recv %s" ?data))))
 
 (def router (atom nil))
 (defn stop-router! [] (when-let [stop-f @router] (stop-f)))

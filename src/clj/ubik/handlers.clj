@@ -13,7 +13,7 @@
 (defn- get-swiper-container [swiper-id]
   [:div {:class "swiper-container" :id swiper-id}
    (reduce conj [:div {:class "swiper-wrapper"}]
-           (map (constantly [:div {:class "swiper-slide"} [:p {:class "huge-text rotated-text"} "x"]])
+           (map (fn [i] [:div {:class "swiper-slide"} [:p {:class "huge-text rotated-text"} i]])
                 (range 4)))])
 
 (defn controller-handler [req]
