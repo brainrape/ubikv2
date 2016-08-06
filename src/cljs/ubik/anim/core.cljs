@@ -2,6 +2,7 @@
   (:require [ubik.anim.renderers :as renderers]
             [ubik.anim.cameras :as cameras]
             [ubik.anim.audio :as audio]
+            [ubik.anim.face-anim :refer [face-animation]]
             [ubik.anim.video-texture :refer [get-video-texture]]
             [ubik.commons.core :refer [anim-ids]]
             [cljs.core.match :refer-macros [match]]
@@ -12,7 +13,6 @@
 
 (def THREE js/THREE)
 (def fps 60)
-(def steps 30)
 
 (def anim-ch (chan))
 
@@ -31,40 +31,6 @@
   (match ?data
          [:ubik/change-anim anim] (go (>! anim-ch anim))
          :else (debugf "unhandled chsk/recv %s" ?data)))
-
-(defn rotate-mesh [mesh anim progress]
-  (when (some? anim)
-    (if (some? @progress)
-      (if (= @progress steps)
-        (do (reset! progress nil) nil)
-        (do
-          (swap! progress inc)
-          (let [rotation-op (if (= (:direction anim) :prev) - +)]
-            (set! (.. mesh -rotation -y) (rotation-op (.. mesh -rotation -y) (/ (/ (.-PI js/Math) 2) steps))))
-          anim))
-      (do (reset! progress 0) anim))))
-
-(defn get-face-mesh []
-  (let [geometry (THREE.CubeGeometry. 600 200 600)
-;        (map (fn [i] [video texture] (get-video-texture (str "crop" i ".mkv"))
-;        materials (clj->js (map (fn [_] (THREE.MeshBasicMaterial. #js {:map texture})) (range 0 6)))
-        mesh (THREE.Mesh. geometry)]; (THREE.MultiMaterial. materials))]
-;    (.play video)
-    mesh))
-
-(def face-animation
-  (let [anim-types [:top :center :bottom]
-        camera (cameras/get-perspective-camera)
-        scene (THREE.Scene.)
-        meshes (into (sorted-map) (map (fn [anim-type] [anim-type (get-face-mesh)]) anim-types))
-        progress (into {} (map (fn [k] [k (atom nil)]) anim-types))]
-    (doseq [[i, [_ mesh]] (map-indexed vector meshes)]
-      (set! (.. mesh -position -y) (- (* i 250) 250))
-      (.add scene mesh))
-    (fn [{:keys [anims] :as state} render-fn]
-      (render-fn scene camera)
-      (let [updated-anims (into {} (map (fn [[k v]] [k (rotate-mesh (meshes k) v (progress k))]) (dissoc anims :bg)))]
-        (assoc-in state [:anims] updated-anims)))))
 
 (defn update-animation
   ([renderer animation rt-texture anim-state]

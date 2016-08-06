@@ -58,16 +58,17 @@
 (defmethod event-msg-handler :chsk/handshake [{:keys [?data]}]
   (debugf "chsk/handshake: %s" ?data))
 
-(defn set-next-anim! [anim-type direction]
+(defn set-next-anim! [swiper anim-type direction]
   (let [next-fn (if (= direction :prev) dec inc)
-        idx (mod (next-fn (@current-anims anim-type)) (count (anim-ids anim-type)))]
+        idx (mod (dec (.-activeIndex swiper))  (- (.. swiper -slides -length) 2))]
+    (debugf "%s %s" (.-activeIndex swiper) (.-length (.-slides swiper)))
     (swap! current-anims assoc anim-type idx)
     (chsk-send! [:ubik/change-anim {:type anim-type :id idx :direction direction}])))
 
 (defn get-swiper [anim-type]
   (let [swiper (js/Swiper. (str "#" (name anim-type) "-container") #js {:direction "horizontal" :loop true :speed 150})]
-    (.on swiper "onSlideNextEnd" (fn [_] (set-next-anim! anim-type :next)))
-    (.on swiper "onSlidePrevEnd" (fn [_] (set-next-anim! anim-type :prev)))
+    (.on swiper "onSlideNextEnd" (fn [_] (set-next-anim! swiper anim-type :next)))
+    (.on swiper "onSlidePrevEnd" (fn [_] (set-next-anim! swiper anim-type :prev)))
     swiper))
 
 (set! js/swipers (clj->js (into {} (map (fn [swiper] [swiper (get-swiper swiper)]) [:top :center :bottom]))))
