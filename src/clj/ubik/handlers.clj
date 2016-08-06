@@ -12,9 +12,9 @@
 
 (defn- get-swiper-container [swiper-id]
   [:div {:class "swiper-container" :id swiper-id}
-   [:div {:class "swiper-wrapper"}
-    [:div {:class "swiper-slide"} [:p {:class "huge-text rotated-text"} "x"]]
-    [:div {:class "swiper-slide"} [:p {:class "huge-text rotated-text"} "y"]]]])
+   (reduce conj [:div {:class "swiper-wrapper"}]
+           (map (constantly [:div {:class "swiper-slide"} [:p {:class "huge-text rotated-text"} "x"]])
+                (range 4)))])
 
 (defn controller-handler [req]
   (hiccup/html

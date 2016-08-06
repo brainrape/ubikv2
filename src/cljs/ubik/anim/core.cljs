@@ -47,7 +47,7 @@
 (defn get-current-anims [previous-anims {:keys [type] :as anim}]
   (if (or (some? (previous-anims type)) (nil? anim))
     previous-anims
-    (assoc-in previous-anims [type] (dissoc anim :type))))
+    (assoc-in previous-anims [type] anim)))
 
 (defn start-loop! []
   (go (while true (<! (timeout (/ 1000 fps))) (>! @loop-ch (.getTime (js/Date.)))))
