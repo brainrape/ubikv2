@@ -1,5 +1,5 @@
 {:require [ubik.anim.core
-           ubik.anim.face-anim
+           ubik.anim.face
            ubik.anim.video-texture
            ubik.commons.core]
  :init-fns [ubik.anim.core/start-router!]

@@ -13,8 +13,6 @@
     (set! (.-minFilter texture) js/THREE.LinearFilter)
     {:video video :texture texture}))
 
-(def load-video-texture)
-
 (def preloaded-video-textures
   (into {} (map (fn [[k ids]] [k (into {} (map (fn [id] [id (get-video-texture (str (name k) id ".mkv"))]) ids))])
                 anim-ids)))

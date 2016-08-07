@@ -2,7 +2,7 @@
   (:require [ubik.anim.renderers :as renderers]
             [ubik.anim.cameras :as cameras]
             [ubik.anim.audio :as audio]
-            [ubik.anim.face-anim :refer [face-animation]]
+            [ubik.anim.face :refer [face-animation init-face-anim!]]
             [ubik.anim.video-texture :refer [get-video-texture]]
             [ubik.commons.core :refer [anim-ids]]
             [cljs.core.match :refer-macros [match]]
@@ -14,7 +14,10 @@
 (def THREE js/THREE)
 (def fps 60)
 
+(def init-ch (chan))
 (def anim-ch (chan))
+
+(defonce main-renderer (renderers/get-main-renderer))
 
 (let [{:keys [ch-recv send-fn]}
       (sente/make-channel-socket! "/chsk" {:type :auto :packer :edn})]
@@ -30,6 +33,7 @@
   (debugf "chsk/recv: %s" ?data)
   (match ?data
          [:ubik/change-anim anim] (go (>! anim-ch anim))
+         [:ubik/current-anims anims] (go (>! init-ch anims))
          :else (debugf "unhandled chsk/recv %s" ?data)))
 
 (defn update-animation
@@ -40,27 +44,39 @@
    (let [render-fn (fn [scene camera] (.render renderer scene camera))]
      (animation anim-state render-fn))))
 
-(defonce main-renderer (renderers/get-main-renderer))
-
-(def loop-ch (atom (chan)))
-
 (defn get-current-anims [previous-anims {:keys [type] :as anim}]
   (if (or (some? (previous-anims type)) (nil? anim))
     previous-anims
-    (assoc-in previous-anims [type] anim)))
+    (assoc previous-anims type anim)))
+
+(defn init-anims! [anims]
+  (init-face-anim! (dissoc anims :bg)))
+
+(def loop-ch (atom (chan)))
+
+(defn anim-loop [audio-data-fn]
+  (go-loop [state {:now-msec (.getTime (js/Date.)) :audio-data (audio-data-fn) :delta 0 :anims {}}]
+    (let [prev-anims (:anims state)
+          now-msec (<! @loop-ch)
+          [next-anim _] (alts! [anim-ch] :default nil)
+          updated-state (update-animation main-renderer face-animation state)
+          curr-anims (:anims updated-state)
+          delta (- now-msec (:now-msec updated-state))
+          anims (get-current-anims curr-anims next-anim)
+          processed (apply dissoc prev-anims (map (fn [[k _]] k) (remove (fn [[_ v]] (nil? v)) curr-anims)))]
+      (doseq [[_ anim] processed]
+        (when anim
+          (chsk-send! [:ubik/processed-anim anim])))
+      (recur (merge updated-state {:now-msec now-msec :delta delta :audio-data (audio-data-fn) :anims anims})))))
 
 (defn start-loop! []
   (go (while true (<! (timeout (/ 1000 fps))) (>! @loop-ch (.getTime (js/Date.)))))
   (let [analyser (audio/get-audio-analyser)
         audio-data (audio/get-data-array analyser)
         get-audio-data (constantly (do (.getByteFrequencyData analyser audio-data) (array-seq audio-data)))]
-    (go-loop [state {:now-msec (.getTime (js/Date.)) :audio-data (get-audio-data) :delta 0 :anims {}}]
-      (let [now-msec (<! @loop-ch)
-            [next-anim _] (alts! [anim-ch] :default nil)
-            updated-state (update-animation main-renderer face-animation state)
-            delta (- now-msec (:now-msec updated-state))
-            anims (get-current-anims (:anims updated-state) next-anim)]
-        (recur (merge updated-state {:now-msec now-msec :delta delta :audio-data (get-audio-data) :anims anims}))))))
+    (go
+      (init-anims! (<! init-ch))
+      (anim-loop get-audio-data))))
 
 (defonce animation-started (atom false))
 (when-not @animation-started
@@ -72,3 +88,7 @@
 (defn start-router! []
   (stop-router!)
   (reset! router (sente/start-chsk-router! ch-chsk event-msg-handler)))
+
+
+(def prev-anims {:top {:type :top, :id 2, :uuid "c65b2582-883b-4fee-9a5e-e12093fa43be", :direction :next}})
+(def curr-anims {:top nil})

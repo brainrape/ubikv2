@@ -1,10 +1,12 @@
 (ns ubik.controller.core
-  (:require [ubik.commons.core :refer [face-anim-types]]
+  (:require [ubik.commons.core :refer [face-anim-types anim-ids]]
             [taoensso.encore :refer [debugf]]
             [taoensso.sente :as sente]
             [cljs.core.match :refer-macros [match]]
             [cljs.core.async :refer [<! timeout put! chan]])
   (:require-macros [cljs.core.async.macros :refer [go-loop alt!]]))
+
+(def current-anims (atom {}))
 
 (let [{:keys [ch-recv send-fn]}
       (sente/make-channel-socket! "/chsk" {:type :auto :packer :edn})]
@@ -31,15 +33,26 @@
   (stop-countdown!)
   (reset! countdown-poison-ch (countdown action-time)))
 
-(defn set-next-anim! [swiper anim-type direction]
+(defn set-next-anim! [swiper type direction]
   (let [next-fn (if (= direction :prev) dec inc)
-        idx (mod (dec (.-activeIndex swiper))  (- (.. swiper -slides -length) 2))]
-    (chsk-send! [:ubik/change-anim {:type anim-type :id idx :direction direction}])))
+        idx (mod (dec (.-activeIndex swiper))  (- (.. swiper -slides -length) 2))
+        prev-idx (@current-anims type)
+        anim-cnt (count (anim-ids type))
+        id-range
+        (match direction
+               :next (map #(-> % inc (mod anim-cnt)) (range prev-idx (if (< idx prev-idx) (+ idx anim-cnt) idx)))
+               :prev (reverse (map #(mod % anim-cnt) (range (if (> idx prev-idx) (- idx anim-cnt) idx) prev-idx))))]
+    (debugf "%s" id-range)
+    (go-loop [[id & rest] id-range]
+      (when id
+        (chsk-send! [:ubik/change-anim {:type type :id id :direction direction}])
+        (<! (timeout 10))
+        (recur rest)))))
 
-(defn get-swiper [anim-type]
-  (let [swiper (js/Swiper. (str "#" (name anim-type) "-container") #js {:direction "horizontal" :loop true :speed 150})]
-    (.on swiper "onSlideNextEnd" (fn [_] (set-next-anim! swiper anim-type :next)))
-    (.on swiper "onSlidePrevEnd" (fn [_] (set-next-anim! swiper anim-type :prev)))
+(defn get-swiper [type]
+  (let [swiper (js/Swiper. (str "#" (name type) "-container") #js {:direction "horizontal" :loop true :speed 150})]
+    (.on swiper "onSlideNextEnd" (fn [_] (set-next-anim! swiper type :next)))
+    (.on swiper "onSlidePrevEnd" (fn [_] (set-next-anim! swiper type :prev)))
     swiper))
 
 (def swipers (into {} (map (fn [type] [type (get-swiper type)]) [:top :center :bottom])))
@@ -49,11 +62,13 @@
   (.slideTo (swipers type) (inc id) 0 false))
 
 (defn set-current-anims! [anims]
+  (reset! current-anims anims)
   (doseq [[type id] (dissoc anims :bg)]
     (set-current-slide! type id)))
 
 (defn change-anim! [type id]
   (when (contains? face-anim-types type)
+    (swap! current-anims assoc type id)
     (set-current-slide! type id)))
 
 (defmulti event-msg-handler :id)

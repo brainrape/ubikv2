@@ -4,7 +4,23 @@
              [scheduler :refer [user-queue calculate-action-timeout last-tick-timestamp start-scheduler!]]]
             [taoensso.timbre :refer [debugf]]))
 
-(def current-anims (atom {:top 0 :center 0 :bottom 0 :bg 0}))
+(def anim-types #{:top :center :bottom :bg})
+
+(def event-queue (ref (into {} (map (fn [type] [type clojure.lang.PersistentQueue/EMPTY]) anim-types))))
+
+(def current-anims (atom (into {} (map (fn [type] [type 0]) anim-types))))
+
+(defn broadcast-change-anim! [anim]
+  (doseq [uid (:any @connected-uids)]
+    (chsk-send! uid [:ubik/change-anim anim])))
+
+(defn process-change-anim-event [{:keys [type id] :as anim}]
+  (dosync
+   (let [anim-with-uuid (assoc anim :uuid (str (java.util.UUID/randomUUID)))]
+     (when (empty? (@event-queue type))
+       (swap! current-anims assoc type id)
+       (broadcast-change-anim! anim-with-uuid))
+     (alter event-queue update type conj anim-with-uuid))))
 
 (defmulti event-msg-handler :id)
 
@@ -37,9 +53,16 @@
   (debugf "ubik/change-anim: %s %s" event ?data)
   (let [uid (get-in ring-req [:params :client-id])]
     (when (= (peek @user-queue) uid)
-      (swap! current-anims assoc (:type ?data) (:id ?data))
-      (doseq [uid (:any @connected-uids)]
-        (chsk-send! uid event)))))
+      (process-change-anim-event ?data))))
+
+(defmethod event-msg-handler :ubik/processed-anim [{{:as anim :keys [type id uuid]} :?data}]
+  (debugf "ubik/processed-anim: %s" anim)
+  (dosync
+   (when (= uuid (-> @event-queue type peek :uuid))
+     (alter event-queue update type pop)
+     (when-let [anim (-> @event-queue type peek)]
+       (swap! current-anims assoc type id)
+       (broadcast-change-anim! anim)))))
 
 (defmethod event-msg-handler :default [{:as ev-msg :keys [event ring-req]}]
   (let [uid (get-in ring-req [:params :client-id])]
