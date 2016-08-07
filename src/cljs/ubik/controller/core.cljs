@@ -42,7 +42,7 @@
         (match direction
                :next (map #(-> % inc (mod anim-cnt)) (range prev-idx (if (< idx prev-idx) (+ idx anim-cnt) idx)))
                :prev (reverse (map #(mod % anim-cnt) (range (if (> idx prev-idx) (- idx anim-cnt) idx) prev-idx))))]
-    (debugf "%s" id-range)
+    (swap! current-anims assoc type idx)
     (go-loop [[id & rest] id-range]
       (when id
         (chsk-send! [:ubik/change-anim {:type type :id id :direction direction}])
@@ -66,11 +66,6 @@
   (doseq [[type id] (dissoc anims :bg)]
     (set-current-slide! type id)))
 
-(defn change-anim! [type id]
-  (when (contains? face-anim-types type)
-    (swap! current-anims assoc type id)
-    (set-current-slide! type id)))
-
 (defmulti event-msg-handler :id)
 
 (defmethod event-msg-handler :default [{:keys [event]}]
@@ -86,9 +81,10 @@
           (hide-elem [id] (set-visibility-by-id! id "hidden"))]
     (match ?data
            [:ubik/current-anims anims] (set-current-anims! anims)
-           [:ubik/change-anim {:type type :id id}] (change-anim! type id)
            [:ubik/turn {:action-time action-time}] (start-countdown! action-time)
-           [:ubik/start-action] (do (show-elem "main-container") (hide-elem "wait-container"))
+           [:ubik/start-action anims] (do (set-current-anims! anims)
+                                          (show-elem "main-container")
+                                          (hide-elem "wait-container"))
            [:ubik/stop-action {:action-time action-time}]
            (do (hide-elem "main-container") (show-elem "wait-container") (start-countdown! action-time))
            :else (debugf "unhandled chsk/recv %s" ?data))))

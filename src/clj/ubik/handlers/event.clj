@@ -34,7 +34,7 @@
     (debugf "ubik/enqueue: %s %s" event uid)
     (swap! user-queue conj uid)
     (if (= (count @user-queue) 1)
-      (chsk-send! uid [:ubik/start-action])
+      (chsk-send! uid [:ubik/start-action @current-anims])
       (chsk-send! uid [:ubik/turn {:action-time (calculate-action-timeout (count @user-queue))}]))))
 
 (defmethod event-msg-handler :chsk/uidport-close [{:keys [event ring-req]}]
@@ -45,7 +45,7 @@
     (when-let [next-uid (and (= closed-idx 0) (peek @user-queue))]
       (reset! last-tick-timestamp (System/currentTimeMillis))
       (start-scheduler!)
-      (chsk-send! next-uid [:ubik/start-action]))
+      (chsk-send! next-uid [:ubik/start-action @current-anims]))
     (doseq [[idx uid] (drop closed-idx (map-indexed vector @user-queue))]
       (chsk-send! uid [:ubik/turn {:action-time (calculate-action-timeout (inc idx))}]))))
 

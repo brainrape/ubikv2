@@ -10,10 +10,6 @@
 
 * UI
 
-* change texture; play/pause
-
-* server-side event queue
-
 * s/boot/lein/
 
 * nodejs sente client
