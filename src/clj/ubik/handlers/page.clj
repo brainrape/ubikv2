@@ -8,7 +8,7 @@
   (css
    [:#main-container {:position "absolute" :top 0 :right 0 :left 0 :bottom 0 :visibility "hidden"}]
    [:#wait-container {:position "absolute" :top 0 :right 0 :left 0 :bottom 0 :visibility "visible"}]
-   [:.swiper-container {:height "33%" :width "100%"}]
+   [:.swiper-container {:height "20%" :width "100%"}]
    [:.swiper-slide {:vertical-align "middle"}]
    [:.huge-text {:text-align "center" :font-size "500%" :font-family "sans-serif"}]))
 
@@ -28,8 +28,9 @@
   (hiccup/html
    [:style controller-style]
    (include-css "https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.3.1/css/swiper.min.css")
-   (reduce conj [:div {:id "main-container"}]
-           (map get-swiper-container ["top-container" "center-container" "bottom-container"]))
+   (let [swiper-types ["top-container" "center-container" "bottom-container" "bg-container"]
+         main-container (reduce conj [:div {:id "main-container"}] (map get-swiper-container swiper-types))]
+     (conj main-container [:div {:id "desc-container"} [:p "swipe them"]]))
    [:div {:id "wait-container"}
     [:p {:id "countdown" :class "huge-text"}]]
    [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.3.1/js/swiper.min.js"}]

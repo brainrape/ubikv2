@@ -50,12 +50,12 @@
         (recur rest)))))
 
 (defn get-swiper [type]
-  (let [swiper (js/Swiper. (str "#" (name type) "-container") #js {:direction "horizontal" :loop true :speed 150})]
+  (let [swiper (js/Swiper. (str "#" (name type) "-container") #js {:direction "horizontal" :loop true :speed 300})]
     (.on swiper "onSlideNextEnd" (fn [_] (set-next-anim! swiper type :next)))
     (.on swiper "onSlidePrevEnd" (fn [_] (set-next-anim! swiper type :prev)))
     swiper))
 
-(def swipers (into {} (map (fn [type] [type (get-swiper type)]) [:top :center :bottom])))
+(def swipers (into {} (map (fn [type] [type (get-swiper type)]) [:top :center :bottom :bg])))
 (set! js/swipers (clj->js swipers))
 
 (defn set-current-slide! [type id]
