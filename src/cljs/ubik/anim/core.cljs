@@ -2,7 +2,8 @@
   (:require [ubik.anim.renderers :as renderers]
             [ubik.anim.cameras :as cameras]
             [ubik.anim.audio :as audio]
-            [ubik.anim.face :refer [face-animation init-face-anim!]]
+            [ubik.anim.face.core :refer [face-animation init-face-anim!]]
+            [ubik.anim.bg.core :refer [bg-animation init-bg-anim!]]
             [ubik.anim.video-texture :refer [get-video-texture]]
             [ubik.commons.core :refer [anim-ids]]
             [cljs.core.match :refer-macros [match]]
@@ -17,7 +18,7 @@
 (def init-ch (chan))
 (def anim-ch (chan))
 
-(defonce main-renderer (renderers/get-main-renderer))
+(def active-anim (atom face-animation))
 
 (let [{:keys [ch-recv send-fn]}
       (sente/make-channel-socket! "/chsk" {:type :auto :packer :edn})]
@@ -36,21 +37,14 @@
          [:ubik/current-anims anims] (go (>! init-ch anims))
          :else (debugf "unhandled chsk/recv %s" ?data)))
 
-(defn update-animation
-  ([renderer animation rt-texture anim-state]
-   (let [render-fn (fn [scene camera] (.render renderer scene camera rt-texture true))]
-     (animation anim-state render-fn)))
-  ([renderer animation anim-state]
-   (let [render-fn (fn [scene camera] (.render renderer scene camera))]
-     (animation anim-state render-fn))))
-
 (defn get-current-anims [previous-anims {:keys [type] :as anim}]
   (if (or (some? (previous-anims type)) (nil? anim))
     previous-anims
     (assoc previous-anims type anim)))
 
 (defn init-anims! [anims]
-  (init-face-anim! (dissoc anims :bg)))
+  (init-face-anim! (dissoc anims :bg))
+  (init-bg-anim! (:bg anims)))
 
 (def loop-ch (atom (chan)))
 
@@ -59,7 +53,7 @@
     (let [prev-anims (:anims state)
           now-msec (<! @loop-ch)
           [next-anim _] (alts! [anim-ch] :default nil)
-          updated-state (update-animation main-renderer face-animation state)
+          updated-state (renderers/update-animation renderers/main-renderer @active-anim state)
           curr-anims (:anims updated-state)
           delta (- now-msec (:now-msec updated-state))
           anims (get-current-anims curr-anims next-anim)
@@ -89,6 +83,4 @@
   (stop-router!)
   (reset! router (sente/start-chsk-router! ch-chsk event-msg-handler)))
 
-
-(def prev-anims {:top {:type :top, :id 2, :uuid "c65b2582-883b-4fee-9a5e-e12093fa43be", :direction :next}})
-(def curr-anims {:top nil})
+(defn set-bg-anim! [] (reset! active-anim bg-animation))

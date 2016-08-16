@@ -12,11 +12,17 @@
    [:.swiper-slide {:vertical-align "middle"}]
    [:.huge-text {:text-align "center" :font-size "500%" :font-family "sans-serif"}]))
 
-(defn anim-handler [req]
+(defn face-handler [req]
   (hiccup/html
    [:body
     [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.min.js"}]
-    [:script {:src "ubik/anim/main.js"}]]))
+    [:script {:src "ubik/anim/face/main.js"}]]))
+
+(defn bg-handler [req]
+  (hiccup/html
+   [:body
+    [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.min.js"}]
+    [:script {:src "ubik/anim/bg/main.js"}]]))
 
 (defn- get-swiper-container [swiper-id]
   [:div {:class "swiper-container" :id swiper-id}

@@ -1,5 +1,5 @@
 (ns ubik.handlers.core
-  (:require [ubik.handlers.page :refer [controller-handler anim-handler]]
+  (:require [ubik.handlers.page :refer [controller-handler face-handler bg-handler]]
             [ubik.sente :refer [ring-ajax-get-or-ws-handshake ring-ajax-post]]
             [ring.middleware
              [defaults :refer [site-defaults wrap-defaults]]
@@ -9,7 +9,8 @@
 
 (defroutes ubik-routes
   (GET "/" req (controller-handler req))
-  (GET "/anim" req (anim-handler req))
+  (GET "/face" req (face-handler req))
+  (GET "/bg" req (bg-handler req))
   (GET "/chsk" req (ring-ajax-get-or-ws-handshake req))
   (POST "/chsk" req (ring-ajax-post req))
   (route/not-found "404"))

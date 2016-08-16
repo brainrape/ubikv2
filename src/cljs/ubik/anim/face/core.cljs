@@ -1,4 +1,4 @@
-(ns ubik.anim.face
+(ns ubik.anim.face.core
   (:require [ubik.anim.cameras :refer [get-perspective-camera]]
             [ubik.anim.video-texture :refer [get-active-video-textures]]
             [ubik.commons.core :refer [face-anim-types]]))

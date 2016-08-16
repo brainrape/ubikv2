@@ -1,6 +1,7 @@
 {:require [ubik.anim.core
-           ubik.anim.face
+           ubik.anim.face.core
+           ubik.anim.cameras
            ubik.anim.video-texture
            ubik.commons.core]
  :init-fns [ubik.anim.core/start-router!]
- :compiler-options {:asset-path "ubik/anim/main.out"}}
+ :compiler-options {:asset-path "ubik/anim/face/main.out"}}

@@ -17,10 +17,13 @@
 (defn process-change-anim-event [{:keys [type id] :as anim}]
   (dosync
    (let [anim-with-uuid (assoc anim :uuid (str (java.util.UUID/randomUUID)))]
-     (when (empty? (@event-queue type))
-       (swap! current-anims assoc type id)
-       (broadcast-change-anim! anim-with-uuid))
-     (alter event-queue update type conj anim-with-uuid))))
+     (if (= type :bg)
+       (broadcast-change-anim! anim-with-uuid)
+       (do
+         (when (empty? (@event-queue type))
+           (swap! current-anims assoc type id)
+           (broadcast-change-anim! anim-with-uuid))
+         (alter event-queue update type conj anim-with-uuid))))))
 
 (defmulti event-msg-handler :id)
 

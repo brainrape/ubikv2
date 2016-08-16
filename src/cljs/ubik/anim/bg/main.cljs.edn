@@ -1,0 +1,9 @@
+{:require [ubik.anim.core
+           ubik.anim.bg.core
+           ubik.anim.bg.cube
+           ubik.anim.bg.canvas           
+           ubik.anim.cameras
+           ubik.anim.video-texture
+           ubik.commons.core]
+ :init-fns [ubik.anim.core/start-router! ubik.anim.core/set-bg-anim!]
+ :compiler-options {:asset-path "ubik/anim/bg/main.out"}}
