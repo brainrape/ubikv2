@@ -1,7 +1,7 @@
 (ns ubik.core
   (:require [ubik.handlers
              [core :refer [ubik-ring-handler]]
-             [event :refer [event-msg-handler]]]
+             [event :refer [event-msg-handler start-event-ttl-scheduler! stop-event-ttl-scheduler!]]]
             [ubik
              [sente :refer [ch-chsk]]
              [scheduler :refer [start-scheduler! stop-scheduler!]]]
@@ -26,6 +26,10 @@
 (defstate scheduler
   :start (start-scheduler!)
   :stop (stop-scheduler!))
+
+(defstate event-ttl-scheduler
+  :start (start-event-ttl-scheduler!)
+  :stop (stop-event-ttl-scheduler!))
 
 (defstate router
   :start (start-router!)

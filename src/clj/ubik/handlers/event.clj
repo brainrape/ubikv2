@@ -2,6 +2,7 @@
   (:require [ubik
              [sente :refer [connected-uids chsk-send!]]
              [scheduler :refer [user-queue calculate-action-timeout last-tick-timestamp start-scheduler!]]]
+            [clojure.core.async :as async :refer [<! go-loop put! chan alt!]]
             [taoensso.timbre :refer [debugf]]))
 
 (def anim-types #{:top :center :bottom :bg})
@@ -10,13 +11,23 @@
 
 (def current-anims (atom (into {} (map (fn [type] [type 0]) anim-types))))
 
+(def event-ttl 2000)
+
 (defn broadcast-change-anim! [anim]
   (doseq [uid (:any @connected-uids)]
     (chsk-send! uid [:ubik/change-anim anim])))
 
+(defn set-next-anim! [type]
+  (alter event-queue update type pop)
+  (when-let [anim (-> @event-queue type peek)]
+    (let [{:keys [id]} anim]
+      (swap! current-anims assoc type id)
+      (broadcast-change-anim! anim))))
+
 (defn process-change-anim-event [{:keys [type id] :as anim}]
   (dosync
-   (let [anim-with-uuid (assoc anim :uuid (str (java.util.UUID/randomUUID)))]
+   (let [ttl (+ (System/currentTimeMillis) (* (inc (count (@event-queue type))) event-ttl))
+         anim-with-uuid (assoc anim :uuid (str (java.util.UUID/randomUUID)) :ttl ttl)]
      (if (= type :bg)
        (broadcast-change-anim! anim-with-uuid)
        (do
@@ -62,11 +73,27 @@
   (debugf "ubik/processed-anim: %s" anim)
   (dosync
    (when (= uuid (-> @event-queue type peek :uuid))
-     (alter event-queue update type pop)
-     (when-let [anim (-> @event-queue type peek)]
-       (swap! current-anims assoc type id)
-       (broadcast-change-anim! anim)))))
+     (set-next-anim!))))
 
 (defmethod event-msg-handler :default [{:as ev-msg :keys [event ring-req]}]
   (let [uid (get-in ring-req [:params :client-id])]
     (debugf "unhandled event: %s %s" event uid)))
+
+(defn event-ttl-scheduler []
+  (let [poison-ch (chan)]
+    (go-loop []
+      (<! (async/timeout (/ event-ttl 2)))
+      (when (alt! poison-ch false :default :keep-going)
+        (dosync
+         (doseq [[type q] @event-queue]
+           (when-let [head-event (peek q)]
+             (when (< (:ttl head-event) (System/currentTimeMillis))
+               (set-next-anim! type)))))
+        (recur)))
+    poison-ch))
+
+(defonce event-ttl-scheduler-poison-ch (atom nil))
+(defn stop-event-ttl-scheduler! [] (when-let [ch @event-ttl-scheduler-poison-ch] (put! ch :stop)))
+(defn start-event-ttl-scheduler! []
+  (stop-event-ttl-scheduler!)
+  (reset! event-ttl-scheduler-poison-ch (event-ttl-scheduler)))
