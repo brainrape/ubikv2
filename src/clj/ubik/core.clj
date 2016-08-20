@@ -9,12 +9,13 @@
             [mount.core :refer [defstate] :as mount]
             [taoensso.timbre :refer [debugf]]
             [taoensso.sente :as sente]
-            [org.httpkit.server :as http-kit]))
+            [org.httpkit.server :as http-kit])
+  (:gen-class))
 
 (defn start-router! []
   (sente/start-chsk-router! ch-chsk event-msg-handler))
 
-(defn start-web-server! [{:keys [port] :or {port 3000}}]
+(defn start-web-server! [{:keys [port]}]
   (let [stop-fn (http-kit/run-server #'ubik-ring-handler {:port port})
         uri (format "http://localhost:%s/" port)]
     (debugf "uri: %s" uri)
@@ -40,7 +41,7 @@
   :stop (web-server :timeout 100))
 
 (defn mount-args [[port]]
-  {:port (edn/read-string port)})
+  {:port (or (edn/read-string port) 3000)})
 
 (defn -main [& args]
   (mount/start-with-args (mount-args args)))

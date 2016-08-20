@@ -1,4 +1,6 @@
 (set-env!
+ :project 'ubik
+ :version "0.0.1"
  :source-paths #{"src/clj" "src/cljs"}
  :resource-paths #{"public"}
  :dependencies '[[adzerk/boot-cljs "1.7.228-1" :scope "test"]
@@ -22,10 +24,18 @@
  '[adzerk.boot-reload :refer [reload]]
  '[mount.core :refer [start stop] :as mount])
 
-(deftask dev
-  []
+(deftask dev []
   (comp
    (watch)
    (cljs :source-map true)
    (reload)
    (repl :server true)))
+
+(deftask build []
+  (comp
+   (cljs :source-map true)
+   (aot :namespace '#{ubik.core})
+   (pom :project (get-env :project)
+        :version (get-env :version))
+   (uber)
+   (jar :main 'ubik.core :file (format "%s-%s.jar" (get-env :project) (get-env :version)))))
