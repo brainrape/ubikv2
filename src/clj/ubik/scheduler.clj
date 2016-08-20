@@ -1,5 +1,7 @@
 (ns ubik.scheduler
-  (:require [ubik.sente :refer [connected-uids chsk-send!]]
+  (:require [ubik
+             [commons :refer [current-anims]]
+             [sente :refer [connected-uids chsk-send!]]]
             [clojure.core.async :as async :refer [<! go-loop put! chan alt!]]))
 
 (def user-queue (atom clojure.lang.PersistentQueue/EMPTY))
@@ -24,7 +26,7 @@
               (do
                 (chsk-send! uid [:ubik/stop-action {:action-time (calculate-action-timeout (count @user-queue))}])
                 (swap! user-queue #(conj (pop %1) %2) uid)
-                (chsk-send! (peek @user-queue) [:ubik/start-action]))
+                (chsk-send! (peek @user-queue) [:ubik/start-action @current-anims]))
               (recur (pop users)))))
         (recur)))
     poison-ch))
@@ -33,4 +35,5 @@
 (defn stop-scheduler! [] (when-let [ch @scheduler-poison-ch] (put! ch :stop)))
 (defn start-scheduler! []
   (stop-scheduler!)
+  (reset! last-tick-timestamp (System/currentTimeMillis))
   (reset! scheduler-poison-ch (scheduler)))

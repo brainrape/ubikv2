@@ -1,15 +1,12 @@
 (ns ubik.handlers.event
   (:require [ubik
+             [commons :refer [current-anims anim-types]]
              [sente :refer [connected-uids chsk-send!]]
              [scheduler :refer [user-queue calculate-action-timeout last-tick-timestamp start-scheduler!]]]
             [clojure.core.async :as async :refer [<! go-loop put! chan alt!]]
             [taoensso.timbre :refer [debugf]]))
 
-(def anim-types #{:top :center :bottom :bg})
-
 (def event-queue (ref (into {} (map (fn [type] [type clojure.lang.PersistentQueue/EMPTY]) anim-types))))
-
-(def current-anims (atom (into {} (map (fn [type] [type 0]) anim-types))))
 
 (def event-ttl 2000)
 
