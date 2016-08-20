@@ -73,7 +73,7 @@
   (debugf "ubik/processed-anim: %s" anim)
   (dosync
    (when (= uuid (-> @event-queue type peek :uuid))
-     (set-next-anim!))))
+     (set-next-anim! type))))
 
 (defmethod event-msg-handler :default [{:as ev-msg :keys [event ring-req]}]
   (let [uid (get-in ring-req [:params :client-id])]
