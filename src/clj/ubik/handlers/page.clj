@@ -12,14 +12,20 @@
    [:.swiper-slide {:vertical-align "middle"}]
    [:.huge-text {:text-align "center" :font-size "500%" :font-family "sans-serif"}]))
 
+(def anim-style
+  (css
+   [:body {:overflow "hidden" :padding "0px" :margin "0px" :background-color "#000000"}]))
+
 (defn face-handler [req]
   (hiccup/html
+   [:style anim-style]
    [:body
     [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.min.js"}]
     [:script {:src "ubik/anim/face/main.js"}]]))
 
 (defn bg-handler [req]
   (hiccup/html
+   [:style anim-style]
    [:body
     [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.min.js"}]
     [:script {:src "ubik/anim/bg/main.js"}]]))
