@@ -6,7 +6,7 @@
             [clojure.core.async :as async :refer [<! go-loop put! chan alt!]]
             [taoensso.timbre :refer [debugf]]))
 
-(def event-queue (ref (into {} (map (fn [type] [type clojure.lang.PersistentQueue/EMPTY]) anim-types))))
+(def event-queue (ref clojure.lang.PersistentQueue/EMPTY))
 
 (def event-ttl 2000)
 
@@ -14,24 +14,23 @@
   (doseq [uid (:any @connected-uids)]
     (chsk-send! uid [:ubik/change-anim anim])))
 
-(defn set-next-anim! [type]
-  (alter event-queue update type pop)
-  (when-let [anim (-> @event-queue type peek)]
-    (let [{:keys [id]} anim]
-      (swap! current-anims assoc type id)
-      (broadcast-change-anim! anim))))
+(defn set-next-anim! []
+  (alter event-queue pop)
+  (when-let [{:keys [type id] :as anim} (peek @event-queue)]
+    (swap! current-anims assoc type id)
+    (broadcast-change-anim! anim)))
 
 (defn process-change-anim-event [{:keys [type id] :as anim}]
   (dosync
-   (let [ttl (+ (System/currentTimeMillis) (* (inc (count (@event-queue type))) event-ttl))
+   (let [ttl (+ (System/currentTimeMillis) (* (inc (count @event-queue)) event-ttl))
          anim-with-uuid (assoc anim :uuid (str (java.util.UUID/randomUUID)) :ttl ttl)]
      (if (= type :bg)
        (broadcast-change-anim! anim-with-uuid)
        (do
-         (when (empty? (@event-queue type))
+         (when (empty? @event-queue)
            (swap! current-anims assoc type id)
            (broadcast-change-anim! anim-with-uuid))
-         (alter event-queue update type conj anim-with-uuid))))))
+         (alter event-queue conj anim-with-uuid))))))
 
 (defmulti event-msg-handler :id)
 
@@ -66,11 +65,11 @@
     (when (= (peek @user-queue) uid)
       (process-change-anim-event ?data))))
 
-(defmethod event-msg-handler :ubik/processed-anim [{{:as anim :keys [type id uuid]} :?data}]
+(defmethod event-msg-handler :ubik/processed-anim [{{:as anim :keys [id uuid]} :?data}]
   (debugf "ubik/processed-anim: %s" anim)
   (dosync
-   (when (= uuid (-> @event-queue type peek :uuid))
-     (set-next-anim! type))))
+   (when (= uuid (-> @event-queue peek :uuid))
+     (set-next-anim!))))
 
 (defmethod event-msg-handler :default [{:as ev-msg :keys [event ring-req]}]
   (let [uid (get-in ring-req [:params :client-id])]
@@ -82,10 +81,9 @@
       (<! (async/timeout (/ event-ttl 2)))
       (when (alt! poison-ch false :default :keep-going)
         (dosync
-         (doseq [[type q] @event-queue]
-           (when-let [head-event (peek q)]
-             (when (< (:ttl head-event) (System/currentTimeMillis))
-               (set-next-anim! type)))))
+         (when-let [head-event (peek @event-queue)]
+           (when (< (:ttl head-event) (System/currentTimeMillis))
+             (set-next-anim!))))
         (recur)))
     poison-ch))
 
