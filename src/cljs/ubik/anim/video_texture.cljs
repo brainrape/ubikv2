@@ -2,8 +2,9 @@
   (:require [ubik.commons.core :refer [anim-ids]]
             [taoensso.encore :refer [debugf]]))
 
-(defn get-video-texture [url]
-  (let [video (.createElement js/document "video")
+(defn get-video-texture [type id]
+  (let [url (str (name type) id ".mkv")
+        video (.createElement js/document "video")
         texture	(js/THREE.Texture. video)]
     (set! (.-height video) 1024)
     (set! (.-width video) 340)
@@ -11,15 +12,18 @@
     (set! (.-loop video) true)
     (set! (.-src video) url)
     (set! (.-minFilter texture) js/THREE.LinearFilter)
-    {:video video :texture texture}))
+    {:video video :texture texture :type type :id id}))
 
 (def preloaded-video-textures
-  (into {} (map (fn [[k ids]] [k (into {} (map (fn [id] [id (get-video-texture (str (name k) id ".mkv"))]) ids))])
+  (into {} (map (fn [[type ids]] [type (into {} (map (fn [id] [id (get-video-texture type id)]) ids))])
                 anim-ids)))
 
-(defn get-active-video-textures [type id]
-  (let [vts-by-type (preloaded-video-textures type)
-        curr-vt (vts-by-type id)
-        next-vt (vts-by-type (mod (inc id) (count vts-by-type)))
-        prev-vt (vts-by-type (mod (dec id) (count vts-by-type)))]
-    {:curr curr-vt :next next-vt :prev prev-vt}))
+(defn get-active-video-textures
+  ([type id]
+   (let [prev-id (mod (dec id) (count (preloaded-video-textures type)))]
+     (get-active-video-textures type id prev-id)))
+  ([type id prev-id]
+   (let [vts-by-type (preloaded-video-textures type)
+         curr-vt (vts-by-type id)
+         prev-vt (vts-by-type prev-id)]
+     {:curr curr-vt :prev prev-vt})))
