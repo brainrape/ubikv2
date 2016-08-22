@@ -15,7 +15,7 @@
 (defn start-router! []
   (sente/start-chsk-router! ch-chsk event-msg-handler))
 
-(defn start-web-server! [{:keys [port]}]
+(defn start-web-server! [{:keys [port] :or {port 3000}}]
   (let [stop-fn (http-kit/run-server #'ubik-ring-handler {:port port})
         uri (format "http://localhost:%s/" port)]
     (debugf "uri: %s" uri)
