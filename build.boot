@@ -1,5 +1,5 @@
 (set-env!
- :project 'ubik
+ :project 'ubikv2
  :version "0.0.1"
  :source-paths #{"src/clj" "src/cljs"}
  :resource-paths #{"public"}
@@ -39,3 +39,6 @@
         :version (get-env :version))
    (uber)
    (jar :main 'ubik.core :file (format "%s-%s.jar" (get-env :project) (get-env :version)))))
+
+(deftask print-version []
+  (print (get-env :version)))
