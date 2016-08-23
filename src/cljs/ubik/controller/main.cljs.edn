@@ -1,4 +1,7 @@
 {:require [ubik.controller.core
            ubik.commons.core]
  :init-fns [ubik.controller.core/start-router!]
- :compiler-options {:asset-path "ubik/controller/main.out"}}
+ :compiler-options {:asset-path "ubik/controller/main.out"
+                    :optimizations :simple
+                    :pretty-print false
+                    :source-map "ubik/controller/map.js.map"}}

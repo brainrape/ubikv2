@@ -50,7 +50,7 @@
 
 (def main-animation
   (let [camera (cameras/get-perspective-camera)
-        scene (THREE.Scene.)x
+        scene (THREE.Scene.)
         {:keys [rt-texture mesh]} (renderers/get-plane-render-target 1000 1150)]
     (.add scene mesh)
     (set! (.. mesh -position -x) 250)
