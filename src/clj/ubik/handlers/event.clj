@@ -8,7 +8,7 @@
 
 (def event-queue (ref clojure.lang.PersistentQueue/EMPTY))
 
-(def event-ttl 4000)
+(def event-ttl 10000)
 
 (defn broadcast-change-anim! [anim]
   (doseq [uid (:any @connected-uids)]
@@ -69,6 +69,8 @@
   (debugf "ubik/processed-anim: %s" anim)
   (dosync
    (when (= uuid (-> @event-queue peek :uuid))
+     (doseq [uid (:any @connected-uids)]
+       (chsk-send! uid [:ubik/processed-anim anim]))
      (set-next-anim!))))
 
 (defmethod event-msg-handler :default [{:as ev-msg :keys [event ring-req]}]
@@ -83,6 +85,8 @@
         (dosync
          (when-let [head-event (peek @event-queue)]
            (when (< (:ttl head-event) (System/currentTimeMillis))
+             (doseq [uid (:any @connected-uids)]
+               (chsk-send! uid [:ubik/processed-anim head-event]))
              (set-next-anim!))))
         (recur)))
     poison-ch))

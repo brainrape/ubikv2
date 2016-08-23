@@ -42,6 +42,8 @@
         (match direction
                :next (map #(-> % inc (mod anim-cnt)) (range prev-idx (if (< idx prev-idx) (+ idx anim-cnt) idx)))
                :prev (reverse (map #(mod % anim-cnt) (range (if (> idx prev-idx) (- idx anim-cnt) idx) prev-idx))))]
+    (when (not= type :bg)
+      (.lockSwipes swiper))
     (swap! current-anims assoc type idx)
     (go-loop [[id & rest] id-range]
       (when id
@@ -82,6 +84,7 @@
     (match ?data
            [:ubik/current-anims anims] (set-current-anims! anims)
            [:ubik/turn {:action-time action-time}] (start-countdown! action-time)
+           [:ubik/processed-anim {:type type}] (.unlockSwipes (swipers type))
            [:ubik/start-action anims] (do (set-current-anims! anims)
                                           (show-elem "main-container")
                                           (hide-elem "wait-container"))
