@@ -4,12 +4,12 @@
             [ubik.commons.core :refer [face-anim-types]]))
 
 (def THREE js/THREE)
-(def steps 200)
+(def steps 100)
 (def active-vts (atom {}))
 (def progress (atom {}))
 
 (def camera-settings {:fov 14 :near 1 :far 6000 :pos {:x 0 :y 0 :z 5000} :aspect (/ 1000 1150)})
-y
+
 (def face-settings {:top {:size {:x 1000 :y 330 :z 20} :pos {:x 0 :y 400}}
                     :center {:size {:x 1000 :y 330 :z 20} :pos {:x 0 :y -10}}
                     :bottom {:size {:x 1000 :y 330 :z 20} :pos {:x 0 :y -410}}})
