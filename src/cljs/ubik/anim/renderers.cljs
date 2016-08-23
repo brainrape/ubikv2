@@ -17,8 +17,7 @@
 (defn get-render-target []
   (THREE.WebGLRenderTarget.
    (.-innerWidth js/window)
-   (.-innerHeight js/window)
-   #js {:minFilter THREE.LinearFilter, :magFilter THREE.NearestFilter, :format THREE.RGBFormat}))
+   (.-innerHeight js/window)))
 
 (defn update-animation
   ([renderer animation rt-texture anim-state]
@@ -27,3 +26,12 @@
   ([renderer animation anim-state]
    (let [render-fn (fn [scene camera] (.render renderer scene camera))]
      (animation anim-state render-fn))))
+
+(defn get-plane-render-target
+  ([] (get-plane-render-target (.-innerWidth js/window) (.-innerHeight js/window)))
+  ([size-x size-y]
+   (let [rt-texture (get-render-target)
+         geometry (THREE.PlaneGeometry. size-x size-y)
+         material (THREE.MeshBasicMaterial. #js {:map (.-texture rt-texture)})
+         mesh (THREE.Mesh. geometry material)]
+     {:rt-texture rt-texture :mesh mesh})))

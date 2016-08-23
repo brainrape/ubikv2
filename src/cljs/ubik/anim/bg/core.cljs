@@ -15,12 +15,7 @@
 (defn init-bg-anim! [anim-id]
   (reset! active-anim [anim-id (all-bg-anims anim-id)]))
 
-(def plane-render-target
-  (let [rt-texture (renderers/get-render-target)
-        geometry (THREE.PlaneGeometry. (.-innerWidth js/window) (.-innerHeight js/window))
-        material (THREE.MeshBasicMaterial. #js {:map (.-texture rt-texture) :color 0x505050})
-        mesh (THREE.Mesh. geometry material)]
-    {:rt-texture rt-texture :mesh mesh}))
+(def plane-render-target (renderers/get-plane-render-target))
 
 (defn set-active-anim! [{:keys [id] :as anim}]
   (let [[active-anim-id _] @active-anim]

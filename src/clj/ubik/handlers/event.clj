@@ -8,7 +8,7 @@
 
 (def event-queue (ref clojure.lang.PersistentQueue/EMPTY))
 
-(def event-ttl 2000)
+(def event-ttl 4000)
 
 (defn broadcast-change-anim! [anim]
   (doseq [uid (:any @connected-uids)]

@@ -3,7 +3,7 @@
             [taoensso.encore :refer [debugf]]))
 
 (defn get-video-texture [type id]
-  (let [url (str (name type) id ".mkv")
+  (let [url (str (name type) id ".mp4")
         video (.createElement js/document "video")
         texture	(js/THREE.Texture. video)]
     (set! (.-height video) 1024)

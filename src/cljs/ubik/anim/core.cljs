@@ -13,7 +13,7 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (def THREE js/THREE)
-(def fps 60)
+(def fps 30)
 
 (def init-ch (chan))
 (def anim-ch (chan))
@@ -48,12 +48,24 @@
 
 (def loop-ch (atom (chan)))
 
+(def main-animation
+  (let [camera (cameras/get-perspective-camera)
+        scene (THREE.Scene.)x
+        {:keys [rt-texture mesh]} (renderers/get-plane-render-target 1000 1150)]
+    (.add scene mesh)
+    (set! (.. mesh -position -x) 250)
+    (set! (.. mesh -position -y) -170)
+    (fn [{:keys [anims delta now-msec] :as state} render-fn]
+      (let [updated-state (renderers/update-animation renderers/main-renderer @active-anim rt-texture state)]
+        (render-fn scene camera)
+        updated-state))))
+
 (defn anim-loop [audio-data-fn]
   (go-loop [state {:now-msec (.getTime (js/Date.)) :audio-data (audio-data-fn) :delta 0 :anims {}}]
     (let [prev-anims (:anims state)
           now-msec (<! @loop-ch)
           [next-anim _] (alts! [anim-ch] :default nil)
-          updated-state (renderers/update-animation renderers/main-renderer @active-anim state)
+          updated-state (renderers/update-animation renderers/main-renderer main-animation state)
           curr-anims (:anims updated-state)
           delta (- now-msec (:now-msec updated-state))
           anims (get-current-anims curr-anims next-anim)

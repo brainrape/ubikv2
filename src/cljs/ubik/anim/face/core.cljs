@@ -8,16 +8,18 @@
 (def active-vts (atom {}))
 (def progress (atom {}))
 
-(def camera-settings {:fov 75 :near 1 :far 10000 :pos {:x 0 :y 0 :z 1000}})
-(def face-gap 50)
-(def face-size {:x 600 :y 200 :z 12})
+(def camera-settings {:fov 14 :near 1 :far 6000 :pos {:x 0 :y 0 :z 5000} :aspect (/ 1000 1150)})
 
-(defn get-face-mesh []
-  (let [{:keys [x y z]} face-size
+(def face-settings {:top {:size {:x 1000 :y 330 :z 20} :pos {:x 0 :y 400}}
+                    :center {:size {:x 1000 :y 330 :z 20} :pos {:x 0 :y -10}}
+                    :bottom {:size {:x 1000 :y 330 :z 20} :pos {:x 0 :y 410}}})
+
+(defn get-face-mesh [type]
+  (let [{:keys [x y z]} (get-in face-settings [type :size])
         geometry (THREE.CubeGeometry. x y z)]
     (THREE.Mesh. geometry)))
 
-(def meshes (into (sorted-map) (map (fn [k] [k (get-face-mesh)]) face-anim-types)))
+(def meshes (into (sorted-map) (map (fn [k] [k (get-face-mesh k)]) face-anim-types)))
 
 (defn set-active-vts! [anims]
   (reset! active-vts
@@ -64,7 +66,7 @@
             nil)
           (do
             (swap! progress update type inc)
-            (let [rotation-op (if (= direction :prev) - +)]
+            (let [rotation-op (if (= direction :prev) + -)]
               (set! (.. mesh -rotation -y) (rotation-op (.. mesh -rotation -y) (/ (/ (.-PI js/Math) 1) steps))))
             (update-video-texture (:prev vt))
           anim))
@@ -78,12 +80,12 @@
           anim)))))
 
 (def face-animation
-  (let [{:keys [fov near far pos]} camera-settings
-        camera (get-perspective-camera fov near far pos)
-        scene (THREE.Scene.)
-        face-delta (+ face-gap (:y face-size))]
+  (let [{:keys [fov near far pos aspect]} camera-settings
+        camera (get-perspective-camera fov near far pos aspect)
+        scene (THREE.Scene.)]
     (doseq [[i, [type mesh]] (map-indexed vector meshes)]
-      (set! (.. mesh -position -y) (- (* i face-delta) face-delta))
+      (set! (.. mesh -position -x) (get-in face-settings [type :pos :x]))
+      (set! (.. mesh -position -y) (get-in face-settings [type :pos :y]))
       (.add scene mesh))
     (fn [{:keys [anims] :as state} render-fn]
       (doseq [[_ vts] @active-vts] (update-video-texture (:curr vts)))
