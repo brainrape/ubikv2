@@ -3,7 +3,7 @@
             [taoensso.encore :refer [debugf]]))
 
 (defn get-video-texture [type id]
-  (let [url (str (name type) id ".mp4")
+  (let [url (str "videos/" (name type) id ".mp4")
         video (.createElement js/document "video")
         texture	(js/THREE.Texture. video)]
     (set! (.-height video) 1024)
@@ -27,3 +27,7 @@
          curr-vt (vts-by-type id)
          prev-vt (vts-by-type prev-id)]
      {:curr curr-vt :prev prev-vt})))
+
+(defn update-video-texture [{:keys [video texture]}]
+  (when (= (.-readyState video) (.-HAVE_ENOUGH_DATA video))
+    (set! (.-needsUpdate texture) true)))

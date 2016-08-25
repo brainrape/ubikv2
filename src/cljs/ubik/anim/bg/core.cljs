@@ -1,8 +1,9 @@
 (ns ubik.anim.bg.core
   (:require [ubik.anim.cameras :refer [get-perspective-camera]]
-            [ubik.anim.renderers :as renderers]
+            [ubik.anim.renderers :as renderers :refer [update-animation main-renderer]]
             [ubik.anim.bg.cube :refer [cube-animation]]
             [ubik.anim.bg.canvas :refer [canvas-animation]]
+            [ubik.anim.bg.bg-video-texture :refer [get-bg-video-anim]]
             [ubik.commons.core :refer [anim-ids]]
             [taoensso.encore :refer [debugf]]))
 
@@ -10,18 +11,22 @@
 
 (def active-anim (atom nil))
 
-(def all-bg-anims {0 cube-animation 1 canvas-animation})
+(def all-bg-anims {0 (get-bg-video-anim 0) 1 (get-bg-video-anim 1)})
 
 (defn init-bg-anim! [anim-id]
-  (reset! active-anim [anim-id (all-bg-anims anim-id)]))
+  (let [{:keys [start-fn] :as anim} (all-bg-anims anim-id)]
+    (start-fn)
+    (reset! active-anim [anim-id anim])))
 
 (def plane-render-target (renderers/get-plane-render-target))
 
 (defn set-active-anim! [{:keys [id] :as anim}]
-  (let [[active-anim-id _] @active-anim]
+  (let [[active-anim-id {:keys [stop-fn]}] @active-anim]
     (if (and (not= id active-anim-id) (some? id))
-      (do
-        (reset! active-anim [id (all-bg-anims id)])
+      (let [{:keys [start-fn] :as next-anim} (all-bg-anims id)]
+        (stop-fn)
+        (start-fn)
+        (reset! active-anim [id next-anim])
         nil)
       anim)))
 
@@ -32,7 +37,7 @@
     (.add scene mesh)
     (fn [{:keys [anims delta now-msec] :as state} render-fn]
       (let [[_ active-anim] @active-anim
-            updated-state (renderers/update-animation renderers/main-renderer active-anim rt-texture state)
+            updated-state (update-animation main-renderer (:update-fn active-anim) rt-texture state)
             final-state (assoc-in updated-state [:anims :bg] (set-active-anim! (:bg anims)))]
         (render-fn scene camera)
         final-state))))

@@ -1,5 +1,5 @@
 (ns ubik.anim.core
-  (:require [ubik.anim.renderers :as renderers]
+  (:require [ubik.anim.renderers :as renderers :refer [update-animation main-renderer get-plane-render-target]]
             [ubik.anim.cameras :as cameras]
             [ubik.anim.audio :as audio]
             [ubik.anim.face.core :refer [face-animation init-face-anim!]]
@@ -18,7 +18,23 @@
 (def init-ch (chan))
 (def anim-ch (chan))
 
-(def active-anim (atom face-animation))
+(defn get-main-animation [allowed-types]
+  (let [camera (cameras/get-perspective-camera)
+        scene (THREE.Scene.)
+        {bg-rt :rt-texture bg-mesh :mesh} (get-plane-render-target (.-innerWidth js/window) (.-innerHeight js/window))
+        {face-rt :rt-texture face-mesh :mesh} (get-plane-render-target 1000 1150)
+        active-meshes (vals (select-keys {:bg bg-mesh :face face-mesh} allowed-types))
+        active-anims (vals (select-keys {:bg [bg-animation bg-rt] :face [face-animation face-rt]} allowed-types))]
+    (set! (.. face-mesh -position -x) 250)
+    (set! (.. face-mesh -position -y) -170)
+    (doseq [mesh active-meshes]
+      (.add scene mesh))
+    (fn [{:keys [anims delta now-msec] :as state} render-fn]
+      (let [updated-state (reduce (fn [acc [anim rt]] (update-animation main-renderer anim rt acc)) state active-anims)]
+        (render-fn scene camera)
+        updated-state))))
+
+(def main-animation (atom (get-main-animation [:face])))
 
 (let [{:keys [ch-recv send-fn]}
       (sente/make-channel-socket! "/chsk" {:type :auto :packer :edn})]
@@ -48,24 +64,12 @@
 
 (def loop-ch (atom (chan)))
 
-(def main-animation
-  (let [camera (cameras/get-perspective-camera)
-        scene (THREE.Scene.)
-        {:keys [rt-texture mesh]} (renderers/get-plane-render-target 1000 1150)]
-    (.add scene mesh)
-    (set! (.. mesh -position -x) 250)
-    (set! (.. mesh -position -y) -170)
-    (fn [{:keys [anims delta now-msec] :as state} render-fn]
-      (let [updated-state (renderers/update-animation renderers/main-renderer @active-anim rt-texture state)]
-        (render-fn scene camera)
-        updated-state))))
-
 (defn anim-loop [audio-data-fn]
   (go-loop [state {:now-msec (.getTime (js/Date.)) :audio-data (audio-data-fn) :delta 0 :anims {}}]
     (let [prev-anims (:anims state)
           now-msec (<! @loop-ch)
           [next-anim _] (alts! [anim-ch] :default nil)
-          updated-state (renderers/update-animation renderers/main-renderer main-animation state)
+          updated-state (update-animation main-renderer @main-animation state)
           curr-anims (:anims updated-state)
           delta (- now-msec (:now-msec updated-state))
           anims (get-current-anims curr-anims next-anim)
@@ -95,4 +99,4 @@
   (stop-router!)
   (reset! router (sente/start-chsk-router! ch-chsk event-msg-handler)))
 
-(defn set-bg-anim! [] (reset! active-anim bg-animation))
+(defn set-bg-anim! [] (reset! main-animation (get-main-animation [:bg])))
