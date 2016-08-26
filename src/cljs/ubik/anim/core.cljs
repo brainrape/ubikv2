@@ -17,6 +17,7 @@
 
 (def init-ch (chan))
 (def anim-ch (chan))
+(def enabled-anims (atom #{:face}))
 
 (defn get-main-animation [allowed-types]
   (let [camera (cameras/get-perspective-camera)
@@ -59,8 +60,10 @@
     (assoc previous-anims type anim)))
 
 (defn init-anims! [anims]
-  (init-face-anim! (dissoc anims :bg))
-  (init-bg-anim! (:bg anims)))
+  (when (contains? @enabled-anims :face)
+    (init-face-anim! (dissoc anims :bg)))
+  (when (contains? @enabled-anims :bg)
+    (init-bg-anim! (:bg anims))))
 
 (def loop-ch (atom (chan)))
 
@@ -99,4 +102,6 @@
   (stop-router!)
   (reset! router (sente/start-chsk-router! ch-chsk event-msg-handler)))
 
-(defn set-bg-anim! [] (reset! main-animation (get-main-animation [:bg])))
+(defn set-bg-anim! []
+  (reset! main-animation (get-main-animation [:bg]))
+  (reset! enabled-anims #{:bg}))

@@ -11,7 +11,7 @@
 
 (def active-anim (atom nil))
 
-(def all-bg-anims {0 (get-bg-video-anim 0) 1 (get-bg-video-anim 1)})
+(def all-bg-anims {0 (get-bg-video-anim 0) 1 (get-bg-video-anim 1) 2 (get-bg-video-anim 2)})
 
 (defn init-bg-anim! [anim-id]
   (let [{:keys [start-fn] :as anim} (all-bg-anims anim-id)]

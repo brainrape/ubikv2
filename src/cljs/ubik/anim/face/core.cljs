@@ -87,7 +87,6 @@
                   v (or velocity 0)
                   s (* v (/ delta 1000))
                   v' (get-velocity direction v delta prog)]
-              (debugf "%s %s" prog (.. mesh -rotation -y))
               (swap! velocities assoc type v')
               (swap! progress update type + (Math/abs s))
               (set! (.. mesh -rotation -y) (rotation-op (.. mesh -rotation -y) (* (/ s steps) PI))))
