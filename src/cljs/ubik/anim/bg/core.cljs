@@ -1,5 +1,6 @@
 (ns ubik.anim.bg.core
   (:require [ubik.anim.cameras :refer [get-perspective-camera]]
+            [ubik.commons.core :refer [anim-ids]]
             [ubik.anim.renderers :as renderers :refer [update-animation main-renderer]]
             [ubik.anim.bg.cube :refer [cube-animation]]
             [ubik.anim.bg.canvas :refer [canvas-animation]]
@@ -11,7 +12,7 @@
 
 (def active-anim (atom nil))
 
-(def all-bg-anims {0 (get-bg-video-anim 0) 1 (get-bg-video-anim 1) 2 (get-bg-video-anim 2)})
+(def all-bg-anims (into {} (map (fn [id] [id (get-bg-video-anim id)]) (:bg anim-ids))))
 
 (defn init-bg-anim! [anim-id]
   (let [{:keys [start-fn] :as anim} (all-bg-anims anim-id)]
