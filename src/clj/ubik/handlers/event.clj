@@ -17,17 +17,15 @@
 (defn set-next-anim! []
   (alter event-queue pop)
   (when-let [{:keys [type id] :as anim} (peek @event-queue)]
-    (swap! current-anims assoc type id)
     (broadcast-change-anim! anim)))
 
 (defn process-change-anim-event [{:keys [type id] :as anim}]
   (dosync
    (let [ttl (+ (System/currentTimeMillis) (* (inc (count @event-queue)) event-ttl))
          anim-with-uuid (assoc anim :uuid (str (java.util.UUID/randomUUID)) :ttl ttl)]
+     (swap! current-anims assoc type id)
      (if (= type :bg)
-       (do
-         (swap! current-anims assoc type id)
-         (broadcast-change-anim! anim-with-uuid))
+       (broadcast-change-anim! anim-with-uuid)
        (do
          (when (empty? @event-queue)
            (swap! current-anims assoc type id)
