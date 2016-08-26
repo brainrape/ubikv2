@@ -42,14 +42,15 @@
   [:div {:class "swiper-container" :id (str swiper-type "-container")}
    (reduce conj [:div {:class "swiper-wrapper"}]
            (map (fn [i] [:div {:class "swiper-slide"}
-                         [:img {:class "swiper-img" :src (str "img/" swiper-type i ".jpg")}]])
+                         [:img {:data-src (str "img/" swiper-type i ".jpg") :class "swiper-lazy"}]
+                         [:div {:class "swiper-lazy-preloader swiper-lazy-preloader-white"}]])
                 (range nr-of-anims)))])
 
 (defn controller-handler [req]
   (hiccup/html
    [:link {:href "https://fonts.googleapis.com/css?family=Quicksand" :rel "stylesheet"}]
    [:style controller-style]
-   (include-css "https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.3.1/css/swiper.min.css")
+   (include-css "css/swiper.css")
    (let [face-types ["top" "center" "bottom"]
          get-face-swiper-container (partial get-swiper-container 21)
          main-container (reduce conj [:div {:id "main-container"}] (map get-face-swiper-container face-types))]
@@ -61,5 +62,5 @@
     [:div {:id "wait-inner-container"}
      [:p {:id "countdown" :class "text-commons huge-text"}]
      [:p {:class "text-commons normal-text"} "till you get the control"]]]
-   [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.3.1/js/swiper.min.js"}]
+   [:script {:src "js/swiper.js"}]
    [:script {:src "ubik/controller/main.js"}]))

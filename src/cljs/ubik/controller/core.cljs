@@ -35,27 +35,25 @@
 
 (defn set-next-anim! [swiper type direction]
   (let [next-fn (if (= direction :prev) dec inc)
-        idx (mod (dec (.-activeIndex swiper))  (- (.. swiper -slides -length) 2))
+        idx (js/parseInt (.-realIndex swiper))
         prev-idx (@current-anims type)
-        anim-cnt (count (anim-ids type))
-        id-range
-        (match direction
-               :next (map #(-> % inc (mod anim-cnt)) (range prev-idx (if (< idx prev-idx) (+ idx anim-cnt) idx)))
-               :prev (reverse (map #(mod % anim-cnt) (range (if (> idx prev-idx) (- idx anim-cnt) idx) prev-idx))))]
+        anim-cnt (count (anim-ids type))]
     (when (not= type :bg)
       (.lockSwipes swiper))
     (go
       (<! (timeout 5000))
       (.unlockSwipes swiper))
     (swap! current-anims assoc type idx)
-    (go-loop [[id & rest] id-range]
-      (when id
-        (chsk-send! [:ubik/change-anim {:type type :id id :direction direction}])
-        (<! (timeout 10))
-        (recur rest)))))
+    (chsk-send! [:ubik/change-anim {:type type :id idx :direction direction}])))
 
 (defn get-swiper [type]
-  (let [swiper (js/Swiper. (str "#" (name type) "-container") #js {:direction "horizontal" :loop true :speed 300})]
+  (let [swiper (js/Swiper. (str "#" (name type) "-container") #js {:direction "horizontal"
+                                                                   :loop true
+                                                                   :speed 400
+                                                                   :preloadImages false
+                                                                   :lazyLoading true
+                                                                   :lazyLoadingInPrevNext true
+                                                                   :lazyLoadingInPrevNextAmount 2})]
     (.on swiper "onSlideNextEnd" (fn [_] (set-next-anim! swiper type :next)))
     (.on swiper "onSlidePrevEnd" (fn [_] (set-next-anim! swiper type :prev)))
     swiper))
