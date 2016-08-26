@@ -49,10 +49,10 @@
    [:style controller-style]
    (include-css "https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.3.1/css/swiper.min.css")
    (let [face-types ["top" "center" "bottom"]
-         get-face-swiper-container (partial get-swiper-container 20)
+         get-face-swiper-container (partial get-swiper-container 21)
          main-container (reduce conj [:div {:id "main-container"}] (map get-face-swiper-container face-types))]
      (conj main-container
-           (get-swiper-container 3 "bg")
+           (get-swiper-container 4 "bg")
            [:div {:id "desc-container"} [:p {:class "text-commons normal-text"} "swipe them"]]))
    [:div {:id "wait-container"}
     [:div {:id "wait-inner-container"}

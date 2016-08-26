@@ -5,7 +5,7 @@
   [(str "public/" type orig-i ".mp4") (str "public/videos/" type rand-i ".mp4")])
 
 (defn shuffle-files []
-  (let [path-pairs (mapcat (fn [type] (let [shuffled-indices (shuffle (range 20))]
+  (let [path-pairs (mapcat (fn [type] (let [shuffled-indices (shuffle (range 21))]
                                         (map-indexed #(get-file-pair type %1 %2) shuffled-indices)))
                            ["top" "center" "bottom"])]
     (doseq [[source-path dest-path] path-pairs]
