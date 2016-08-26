@@ -4,7 +4,7 @@
             [taoensso.sente :as sente]
             [cljs.core.match :refer-macros [match]]
             [cljs.core.async :refer [<! timeout put! chan]])
-  (:require-macros [cljs.core.async.macros :refer [go-loop alt!]]))
+  (:require-macros [cljs.core.async.macros :refer [go-loop alt! go]]))
 
 (def current-anims (atom {}))
 
@@ -44,6 +44,9 @@
                :prev (reverse (map #(mod % anim-cnt) (range (if (> idx prev-idx) (- idx anim-cnt) idx) prev-idx))))]
     (when (not= type :bg)
       (.lockSwipes swiper))
+    (go
+      (<! (timeout 5000))
+      (.unlockSwipes swiper))
     (swap! current-anims assoc type idx)
     (go-loop [[id & rest] id-range]
       (when id

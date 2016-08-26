@@ -74,17 +74,19 @@
     (let [mesh (meshes type)
           vt (@active-vts type)
           prog (@progress type)
-          velocity (@velocities type)]
+          velocity (@velocities type)
+          rotation-op (if (= direction :prev) + -)]
       (if (some? prog)
         (if (> prog steps)
           (do
             (swap! progress assoc type nil)
             (swap! velocities assoc type 0)
+            (set! (.. mesh -rotation -y)
+                  (rotation-op (.. mesh -rotation -y) (* (/ (- steps prog) steps) PI)))
             (.pause (get-in vt [:prev :video]))
             nil)
           (do
-            (let [rotation-op (if (= direction :prev) + -)
-                  v (or velocity 0)
+            (let [v (or velocity 0)
                   s (* v (/ delta 1000))
                   v' (get-velocity direction v delta prog)]
               (swap! velocities assoc type v')
