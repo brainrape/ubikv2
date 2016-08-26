@@ -26,8 +26,8 @@
          anim-with-uuid (assoc anim :uuid (str (java.util.UUID/randomUUID)) :ttl ttl)]
      (if (= type :bg)
        (do
-         (swap! current-anims assoc type id))
-         (broadcast-change-anim! anim-with-uuid)
+         (swap! current-anims assoc type id)
+         (broadcast-change-anim! anim-with-uuid))
        (do
          (when (empty? @event-queue)
            (swap! current-anims assoc type id)
