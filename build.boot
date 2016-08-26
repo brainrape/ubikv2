@@ -1,6 +1,6 @@
 (set-env!
  :project 'ubikv2
- :version "0.0.7"
+ :version "0.0.8"
  :source-paths #{"src/clj" "src/cljs"}
  :resource-paths #{"public"}
  :dependencies '[[adzerk/boot-cljs "1.7.228-1" :scope "test"]
