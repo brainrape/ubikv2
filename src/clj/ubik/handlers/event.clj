@@ -68,10 +68,9 @@
 (defmethod event-msg-handler :ubik/processed-anim [{{:as anim :keys [id uuid]} :?data}]
   (debugf "ubik/processed-anim: %s" anim)
   (dosync
-   (when (= uuid (-> @event-queue peek :uuid))
-     (doseq [uid (:any @connected-uids)]
-       (chsk-send! uid [:ubik/processed-anim anim]))
-     (set-next-anim!))))
+   (doseq [uid (:any @connected-uids)]
+     (chsk-send! uid [:ubik/processed-anim anim]))
+   (set-next-anim!)))
 
 (defmethod event-msg-handler :default [{:as ev-msg :keys [event ring-req]}]
   (let [uid (get-in ring-req [:params :client-id])]
