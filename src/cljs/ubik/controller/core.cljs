@@ -65,7 +65,7 @@
 
 (defn set-current-anims! [anims]
   (reset! current-anims anims)
-  (doseq [[type id] (dissoc anims :bg)]
+  (doseq [[type id] anims]
     (set-current-slide! type id)))
 
 (defmulti event-msg-handler :id)
