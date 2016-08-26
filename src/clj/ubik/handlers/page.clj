@@ -10,6 +10,8 @@
    [:#main-container {:position "absolute" :top 0 :right 0 :left 0 :bottom 0 :visibility "hidden"}]
    [:#wait-container {:position "absolute" :top 0 :right 0 :left 0 :bottom 0 :visibility "visible"}]
    [:#wait-inner-container {:position "fixed" :bottom 0 :width "100%" :height "33%"}]
+   [:#desc-container {:display "table" :text-align "center" :width "100%" :height "20%"}]
+   [:#desc-text {:display "table-cell" :vertical-align "middle"}]
    [:.swiper-container {:height "20%" :width "100%"}]
    [:.swiper-slide {:vertical-align "middle"}]
    [:.text-commons {:text-align "center" :font-family "Quicksand, sans-serif" :text-transform "uppercase"
@@ -53,7 +55,8 @@
          main-container (reduce conj [:div {:id "main-container"}] (map get-face-swiper-container face-types))]
      (conj main-container
            (get-swiper-container 4 "bg")
-           [:div {:id "desc-container"} [:p {:class "text-commons normal-text"} "swipe them"]]))
+           [:div {:id "desc-container"}
+             [:span {:id "desc-text" :class "text-commons normal-text"} "swipe them"]]))
    [:div {:id "wait-container"}
     [:div {:id "wait-inner-container"}
      [:p {:id "countdown" :class "text-commons huge-text"}]
