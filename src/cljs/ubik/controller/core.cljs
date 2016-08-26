@@ -6,8 +6,6 @@
             [cljs.core.async :refer [<! timeout put! chan]])
   (:require-macros [cljs.core.async.macros :refer [go-loop alt! go]]))
 
-(def current-anims (atom {}))
-
 (let [{:keys [ch-recv send-fn]}
       (sente/make-channel-socket! "/chsk" {:type :auto :packer :edn :host "rotat.io"})]
   (def ch-chsk ch-recv)
@@ -34,16 +32,12 @@
   (reset! countdown-poison-ch (countdown action-time)))
 
 (defn set-next-anim! [swiper type direction]
-  (let [next-fn (if (= direction :prev) dec inc)
-        idx (js/parseInt (.-realIndex swiper))
-        prev-idx (@current-anims type)
-        anim-cnt (count (anim-ids type))]
+  (let [idx (js/parseInt (.-realIndex swiper))]
     (when (not= type :bg)
-      (.lockSwipes swiper))
-    (go
-      (<! (timeout 5000))
-      (.unlockSwipes swiper))
-    (swap! current-anims assoc type idx)
+      (.lockSwipes swiper)
+      (go
+        (<! (timeout 5000))
+        (.unlockSwipes swiper)))
     (chsk-send! [:ubik/change-anim {:type type :id idx :direction direction}])))
 
 (defn get-swiper [type]
@@ -53,7 +47,9 @@
                                                                    :preloadImages false
                                                                    :lazyLoading true
                                                                    :lazyLoadingInPrevNext true
-                                                                   :lazyLoadingInPrevNextAmount 2})]
+                                                                   :lazyLoadingInPrevNextAmount 2
+                                                                   :initialSlide 0
+                                                                   :preventClicks true})]
     (.on swiper "onSlideNextEnd" (fn [_] (set-next-anim! swiper type :next)))
     (.on swiper "onSlidePrevEnd" (fn [_] (set-next-anim! swiper type :prev)))
     swiper))
@@ -62,10 +58,13 @@
 (set! js/swipers (clj->js swipers))
 
 (defn set-current-slide! [type id]
-  (.slideTo (swipers type) (inc id) 0 false))
+  (let [swiper (swipers type)
+        curr-idx (js/parseInt (.-realIndex swiper))]
+    (if (> curr-idx id)
+      (doseq [_ (range (- curr-idx id))] (.slidePrev swiper false 0))
+      (doseq [_ (range (- id curr-idx))] (.slideNext swiper false 0)))))
 
 (defn set-current-anims! [anims]
-  (reset! current-anims anims)
   (doseq [[type id] anims]
     (set-current-slide! type id)))
 
