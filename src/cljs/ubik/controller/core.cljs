@@ -9,7 +9,7 @@
 (def current-anims (atom {}))
 
 (let [{:keys [ch-recv send-fn]}
-      (sente/make-channel-socket! "/chsk" {:type :auto :packer :edn})]
+      (sente/make-channel-socket! "/chsk" {:type :auto :packer :edn :host "rotat.io"})]
   (def ch-chsk ch-recv)
   (def chsk-send! send-fn))
 
