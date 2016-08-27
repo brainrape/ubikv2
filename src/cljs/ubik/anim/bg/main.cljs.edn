@@ -1,8 +1,5 @@
 {:require [ubik.anim.core
            ubik.anim.bg.core
-           ubik.anim.bg.cube
-           ubik.anim.bg.canvas
-           ubik.anim.bg.bg-video-texture
            ubik.anim.cameras
            ubik.anim.video-texture
            ubik.commons.core]

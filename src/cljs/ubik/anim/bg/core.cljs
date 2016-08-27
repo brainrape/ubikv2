@@ -1,44 +1,41 @@
 (ns ubik.anim.bg.core
   (:require [ubik.anim.cameras :refer [get-perspective-camera]]
-            [ubik.commons.core :refer [anim-ids]]
-            [ubik.anim.renderers :as renderers :refer [update-animation main-renderer]]
-            [ubik.anim.bg.cube :refer [cube-animation]]
-            [ubik.anim.bg.canvas :refer [canvas-animation]]
-            [ubik.anim.bg.bg-video-texture :refer [get-bg-video-anim]]
-            [ubik.commons.core :refer [anim-ids]]
+            [ubik.anim.video-texture :refer [preloaded-video-textures update-video-texture]]
             [taoensso.encore :refer [debugf]]))
 
 (def THREE js/THREE)
 
-(def active-anim (atom nil))
+(def active-vt (atom nil))
 
-(def all-bg-anims (into {} (map (fn [id] [id (get-bg-video-anim id)]) (:bg anim-ids))))
+(def plane-mesh (let [geometry (THREE.PlaneGeometry. 1000 1000)]
+                  (THREE.Mesh. geometry)))
+
+(defn get-basic-material [texture] )
 
 (defn init-bg-anim! [anim-id]
-  (let [{:keys [start-fn] :as anim} (all-bg-anims anim-id)]
-    (start-fn)
-    (reset! active-anim [anim-id anim])))
-
-(def plane-render-target (renderers/get-plane-render-target))
+  (let [{:keys [video texture] :as vt} (get-in preloaded-video-textures [:bg anim-id])
+        material (THREE.MeshBasicMaterial. #js {:map texture})]
+    (reset! active-vt vt)
+    (.play video)
+    (set! (.-material plane-mesh) material)))
 
 (defn set-active-anim! [{:keys [id] :as anim}]
-  (let [[active-anim-id {:keys [stop-fn]}] @active-anim]
-    (if (and (not= id active-anim-id) (some? id))
-      (let [{:keys [start-fn] :as next-anim} (all-bg-anims id)]
-        (stop-fn)
-        (start-fn)
-        (reset! active-anim [id next-anim])
-        nil)
-      anim)))
+  (when (and (not= id (:id @active-vt)) (some? id))
+    (let [{:keys [video texture] :as vt} (get-in preloaded-video-textures [:bg id])
+          material (THREE.MeshBasicMaterial. #js {:map texture})
+          prev-video (:video @active-vt)]
+      (.play video)
+      (reset! active-vt vt)
+      (set! (.-material plane-mesh) material)
+      (update-video-texture vt)
+      (.pause prev-video)
+      nil)))
 
 (def bg-animation
   (let [camera (get-perspective-camera)
-        scene (THREE.Scene.)
-        {:keys [rt-texture mesh]} plane-render-target]
-    (.add scene mesh)
+        scene (THREE.Scene.)]
+    (.add scene plane-mesh)
     (fn [{:keys [anims delta now-msec] :as state} render-fn]
-      (let [[_ active-anim] @active-anim
-            updated-state (update-animation main-renderer (:update-fn active-anim) rt-texture state)
-            final-state (assoc-in updated-state [:anims :bg] (set-active-anim! (:bg anims)))]
-        (render-fn scene camera)
-        final-state))))
+      (update-video-texture @active-vt)
+      (render-fn scene camera)
+      (assoc-in state [:anims :bg] (set-active-anim! (:bg anims))))))
