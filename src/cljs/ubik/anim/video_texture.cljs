@@ -12,6 +12,7 @@
     (set! (.-loop video) true)
     (set! (.-src video) url)
     (set! (.-minFilter texture) js/THREE.LinearFilter)
+    (set! (.-onended video) (fn [] (.load video) (.play video)))
     {:video video :texture texture :type type :id id}))
 
 (def preloaded-video-textures

@@ -7,7 +7,8 @@
 
 (def active-vt (atom nil))
 
-(def plane-mesh (let [geometry (THREE.PlaneGeometry. 1000 1000)]
+(def plane-mesh
+  (let [geometry (THREE.PlaneGeometry. (.-innerWidth js/window) (.-innerHeight js/window))]
                   (THREE.Mesh. geometry)))
 
 (defn get-basic-material [texture] )
