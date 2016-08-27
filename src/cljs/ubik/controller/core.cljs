@@ -40,8 +40,8 @@
         (.unlockSwipes swiper)))
     (chsk-send! [:ubik/change-anim {:type type :id idx :direction direction}])))
 
-(defn get-swiper [type]
-  (let [swiper (js/Swiper. (str "#" (name type) "-container") #js {:direction "horizontal"
+(defn create-swiper [type]
+  (let [swiper (js/Swiper. (str ".s" (name type)) #js {:direction "horizontal"
                                                                    :loop true
                                                                    :speed 400
                                                                    :preloadImages false
@@ -54,11 +54,18 @@
     (.on swiper "onSlidePrevEnd" (fn [_] (set-next-anim! swiper type :prev)))
     swiper))
 
-(def swipers (into {} (map (fn [type] [type (get-swiper type)]) [:top :center :bottom :bg])))
-(set! js/swipers (clj->js swipers))
+(let [swipers (into {} (map (fn [type] [type (create-swiper type)]) [:top :center :bottom :bg]))]
+  (set! js/swipers (clj->js swipers)))
+
+(defn get-swiper [type]
+  (case type
+    :top (.-top js/swipers)
+    :center (.-center js/swipers)
+    :bottom (.-bottom js/swipers)
+    :bg (.-bg js/swipers)))
 
 (defn set-current-slide! [type id]
-  (let [swiper (swipers type)
+  (let [swiper (get-swiper type)
         curr-idx (js/parseInt (.-realIndex swiper))]
     (if (> curr-idx id)
       (doseq [_ (range (- curr-idx id))] (.slidePrev swiper false 0))
@@ -84,7 +91,7 @@
     (match ?data
            [:ubik/current-anims anims] (set-current-anims! anims)
            [:ubik/turn {:action-time action-time}] (start-countdown! action-time)
-           [:ubik/processed-anim {:type type}] (.unlockSwipes (swipers type))
+           [:ubik/processed-anim {:type type}] (.unlockSwipes (get-swiper type))
            [:ubik/start-action anims] (do (set-current-anims! anims)
                                           (show-elem "main-container")
                                           (hide-elem "wait-container"))

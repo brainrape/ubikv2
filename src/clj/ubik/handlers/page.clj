@@ -1,5 +1,6 @@
 (ns ubik.handlers.page
   (:require [garden.core :refer [css]]
+            [clojure.string :refer [join]]
             [hiccup
              [core :as hiccup]
              [page :refer [include-css]]]))
@@ -39,7 +40,7 @@
     [:script {:src "ubik/anim/bg/main.js"}]]))
 
 (defn- get-swiper-container [nr-of-anims swiper-type]
-  [:div {:class "swiper-container" :id (str swiper-type "-container")}
+  [:div {:class (join " " ["swiper-container" (str "s" swiper-type)]) :id (str swiper-type "-container")}
    (reduce conj [:div {:class "swiper-wrapper"}]
            (map (fn [i] [:div {:class "swiper-slide"}
                          [:img {:data-src (str "img/" swiper-type i ".jpg") :class "swiper-lazy"}]
