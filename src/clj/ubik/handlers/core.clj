@@ -4,6 +4,7 @@
             [ring.middleware
              [defaults :refer [site-defaults wrap-defaults]]
              [resource :refer [wrap-resource]]]
+            [ring.middleware.partial-content :refer [wrap-partial-content]]
             [compojure.core :refer [defroutes GET POST]]
             [compojure.route :as route]))
 
@@ -18,4 +19,5 @@
 (def ubik-ring-handler
   (-> ubik-routes
       (wrap-defaults site-defaults)
+      (wrap-partial-content)
       (wrap-resource "/")))

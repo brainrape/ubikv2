@@ -15,6 +15,7 @@
                  [compojure "1.5.1"]
                  [hiccup "1.0.5"]
                  [garden "1.3.2"]
+                 [ring-partial-content "1.0.0"]
                  [org.clojure/core.match "0.3.0-alpha4"]
                  [mount "0.1.10"]])
 

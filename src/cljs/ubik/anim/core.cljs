@@ -28,7 +28,7 @@
         active-anims (vals (select-keys {:bg [bg-animation bg-rt] :face [face-animation face-rt]} allowed-types))]
     (set! (.. face-mesh -position -x) 250)
     (set! (.. face-mesh -position -y) -170)
-    (set! (.. bg-mesh -position -z) 650)
+    (set! (.. bg-mesh -position -z) 550)
     (doseq [mesh active-meshes]
       (.add scene mesh))
     (fn [{:keys [anims delta now-msec] :as state} render-fn]
