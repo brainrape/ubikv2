@@ -36,7 +36,7 @@
     (when (not= type :bg)
       (.lockSwipes swiper)
       (go
-        (<! (timeout 5000))
+        (<! (timeout 10000))
         (.unlockSwipes swiper)))
     (chsk-send! [:ubik/change-anim {:type type :id idx :direction direction}])))
 
@@ -54,15 +54,17 @@
     (.on swiper "onSlidePrevEnd" (fn [_] (set-next-anim! swiper type :prev)))
     swiper))
 
-(let [swipers (into {} (map (fn [type] [type (create-swiper type)]) [:top :center :bottom :bg]))]
-  (set! js/swipers (clj->js swipers)))
+(set! js/topswiper (create-swiper :top))
+(set! js/centerswiper (create-swiper :center))
+(set! js/bottomswiper (create-swiper :bottom))
+(set! js/bgswiper (create-swiper :bg))
 
 (defn get-swiper [type]
   (case type
-    :top (.-top js/swipers)
-    :center (.-center js/swipers)
-    :bottom (.-bottom js/swipers)
-    :bg (.-bg js/swipers)))
+    :top js/topswiper
+    :center js/centerswiper
+    :bottom js/bottomswiper
+    :bg js/bgswiper))
 
 (defn set-current-slide! [type id]
   (let [swiper (get-swiper type)
